@@ -179,20 +179,20 @@ export default function ExamsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Turma (opcional)</Label>
-                  <Select value={form.classId} onValueChange={v => setForm(f => ({ ...f, classId: v }))}>
+                  <Select value={form.classId || "_none"} onValueChange={v => setForm(f => ({ ...f, classId: v === "_none" ? "" : v }))}>
                     <SelectTrigger><SelectValue placeholder="Todas as turmas" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todas as turmas</SelectItem>
+                      <SelectItem value="_none">Todas as turmas</SelectItem>
                       {classes?.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Disciplina (opcional)</Label>
-                  <Select value={form.subjectId} onValueChange={v => setForm(f => ({ ...f, subjectId: v }))}>
+                  <Select value={form.subjectId || "_none"} onValueChange={v => setForm(f => ({ ...f, subjectId: v === "_none" ? "" : v }))}>
                     <SelectTrigger><SelectValue placeholder="Qualquer" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Qualquer</SelectItem>
+                      <SelectItem value="_none">Qualquer</SelectItem>
                       {subjects?.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
