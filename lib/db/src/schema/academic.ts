@@ -2,6 +2,7 @@ import { pgTable, serial, text, integer, timestamp, pgEnum } from "drizzle-orm/p
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { tenantsTable } from "./tenants";
+import { usersTable } from "./users";
 
 export const educationalLevelEnum = pgEnum("educational_level", [
   "infantil",
@@ -51,7 +52,7 @@ export const classesTable = pgTable("classes", {
 export const classStudentsTable = pgTable("class_students", {
   id: serial("id").primaryKey(),
   classId: integer("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
-  studentId: integer("student_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
+  studentId: integer("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   enrolledAt: timestamp("enrolled_at").notNull().defaultNow(),
 });
 
