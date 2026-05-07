@@ -1,36 +1,52 @@
-# [Project name]
+# EduSaaS — Plataforma Educacional Multi-tenant
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Plataforma SaaS completa para gestão escolar: criação de provas com correção automática, estrutura acadêmica (séries, turmas, disciplinas), interface de aluno com timer, e relatórios pedagógicos avançados.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080, proxied to /api)
+- `pnpm --filter @workspace/escola-saas run dev` — run the frontend (proxied to /)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required env: `DATABASE_URL` — Postgres connection string, `SESSION_SECRET` — JWT signing secret
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
+- Frontend: React 19 + Vite 7, Wouter (routing), TanStack Query, Tailwind CSS v4, Recharts, Sonner
+- API: Express 5, pino logging
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
+- API codegen: Orval (from OpenAPI spec in `lib/api-spec/openapi.yaml`)
 - Build: esbuild (CJS bundle)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/api-spec/openapi.yaml` — source of truth for all API contracts
+- `lib/api-client-react/src/generated/api.ts` — generated React Query hooks (do not edit manually)
+- `lib/db/src/schema/` — Drizzle ORM schema (tenants, users, academic, exams)
+- `artifacts/api-server/src/routes/` — all backend route handlers
+- `artifacts/escola-saas/src/pages/` — all frontend page components
+- `artifacts/escola-saas/src/components/Layout.tsx` — shared sidebar layout + PageHeader
+- `artifacts/escola-saas/src/lib/auth.tsx` — AuthContext, AuthProvider, useAuth hook
+- `artifacts/escola-saas/src/index.css` — Tailwind theme vars (deep blue primary)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- **Contract-first API**: OpenAPI spec → Orval codegen → typed React Query hooks + Zod schemas. Never write hooks manually.
+- **JWT in localStorage**: Token stored as `edusaas_token`, injected via `setAuthTokenGetter` into every API request. No cookies.
+- **Multi-tenant by design**: Every DB query scoped to `tenantId` extracted from JWT. Tenant isolation enforced at route middleware level.
+- **`lib/api-client-react` exports**: The `./src/custom-fetch` sub-path must be declared in `exports` in package.json — Vite enforces package exports strictly.
+- **Wouter routing**: Use `<Link href="..."><Button>...</Button></Link>` — do NOT wrap with inner `<a>` tags, Link already renders as `<a>`.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- **Admin/Coordinator**: Dashboard with institution stats, exam management (create → add questions → publish), user management, classes/series/subjects hierarchy, pedagogical reports with charts.
+- **Teacher**: Exam creation, class management, student performance reports.
+- **Student**: Browse available exams, take exams with countdown timer, view detailed results with answer-by-answer breakdown and explanations.
+- **Exam types**: ENEM style, Simulado, traditional Prova, Atividade (homework) — each with optional time limit, scheduling, public/private flags.
 
 ## User preferences
 
@@ -38,7 +54,10 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- After running `pnpm --filter @workspace/api-spec run codegen`, the file `lib/api-zod/src/index.ts` may get a duplicate export. Check and fix if needed.
+- Never call service ports directly (e.g. port 8080) — always go through the proxy at `localhost:80`.
+- `getListClassesQueryKey` requires params argument (can be empty object `{}`).
+- The `useLogout` hook is a mutation (POST /api/auth/logout) — handle its `onSettled` to call `logout()` from AuthContext.
 
 ## Pointers
 

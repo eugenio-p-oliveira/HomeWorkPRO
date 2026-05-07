@@ -1,0 +1,31 @@
+import { Router } from "express";
+import { db, questionsTable, questionOptionsTable } from "@workspace/db";
+import { eq, sql } from "drizzle-orm";
+import { requireAuth } from "../lib/auth";
+
+const router = Router();
+router.use(requireAuth);
+
+router.put("/:questionId", async (req, res) => {
+  const id = parseInt(req.params.questionId);
+  const { type, statement, explanation, topicId, points, order, options } = req.body;
+  const [q] = await db.update(questionsTable).set({ type, statement, explanation, topicId, points: String(points ?? 1), order })
+    .where(eq(questionsTable.id, id)).returning();
+  if (!q) { res.status(404).json({ error: "Not found" }); return; }
+  if (options?.length > 0) {
+    await db.delete(questionOptionsTable).where(eq(questionOptionsTable.questionId, id));
+    await db.insert(questionOptionsTable).values(
+      options.map((o: any) => ({ questionId: id, text: o.text, isCorrect: o.isCorrect, letter: o.letter }))
+    );
+  }
+  const updatedOptions = await db.select().from(questionOptionsTable).where(eq(questionOptionsTable.questionId, id));
+  res.json({ ...q, points: parseFloat(String(q.points)), createdAt: q.createdAt.toISOString(), options: updatedOptions });
+});
+
+router.delete("/:questionId", async (req, res) => {
+  const id = parseInt(req.params.questionId);
+  await db.delete(questionsTable).where(eq(questionsTable.id, id));
+  res.json({ success: true });
+});
+
+export default router;
