@@ -3,7 +3,7 @@ import {
   db, examsTable, questionsTable, questionOptionsTable, examSessionsTable, studentAnswersTable,
   usersTable, subjectsTable, classesTable
 } from "@workspace/db";
-import { eq, and, sql, count, avg } from "drizzle-orm";
+import { eq, and, sql, count, avg, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { activityLogTable } from "@workspace/db";
 
@@ -18,7 +18,7 @@ async function getExamWithQuestions(examId: number) {
   const questionIds = questions.map(q => q.id);
   let options: any[] = [];
   if (questionIds.length > 0) {
-    options = await db.select().from(questionOptionsTable).where(sql`question_id = ANY(${questionIds})`);
+    options = await db.select().from(questionOptionsTable).where(inArray(questionOptionsTable.questionId, questionIds));
   }
   const optsByQ = options.reduce((acc: any, o) => {
     if (!acc[o.questionId]) acc[o.questionId] = [];
@@ -53,7 +53,7 @@ router.get("/", async (req, res) => {
   let qCounts: Record<number, number> = {};
   if (examIds.length > 0) {
     const counts = await db.select({ examId: questionsTable.examId, cnt: count() })
-      .from(questionsTable).where(sql`exam_id = ANY(${examIds})`).groupBy(questionsTable.examId);
+      .from(questionsTable).where(inArray(questionsTable.examId, examIds)).groupBy(questionsTable.examId);
     qCounts = Object.fromEntries(counts.map(c => [c.examId, Number(c.cnt)]));
   }
   res.json(exams.map(e => ({
@@ -162,7 +162,7 @@ router.get("/:id/report", async (req, res) => {
   const sessionIds = completed.map(s => s.id);
   let answers: any[] = [];
   if (sessionIds.length > 0) {
-    answers = await db.select().from(studentAnswersTable).where(sql`session_id = ANY(${sessionIds})`);
+    answers = await db.select().from(studentAnswersTable).where(inArray(studentAnswersTable.sessionId, sessionIds));
   }
   const questionStats = questions.map(q => {
     const qAnswers = answers.filter(a => a.questionId === q.id);
@@ -193,7 +193,7 @@ router.get("/:id/report", async (req, res) => {
   const studentIds = [...new Set(completed.map(s => s.studentId))];
   let topStudents: any[] = [];
   if (studentIds.length > 0) {
-    const students = await db.select().from(usersTable).where(sql`id = ANY(${studentIds})`);
+    const students = await db.select().from(usersTable).where(inArray(usersTable.id, studentIds));
     const studentMap = Object.fromEntries(students.map(s => [s.id, s.name]));
     topStudents = completed
       .map(s => ({
