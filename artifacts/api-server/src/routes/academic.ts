@@ -202,12 +202,35 @@ router.get("/classes/:id/stats", async (req, res) => {
     const maxScore = sc.length ? 10 : 0;
     return { userId: u.id, name: u.name, score: avg, percentage: maxScore > 0 ? (avg / maxScore) * 100 : 0, rank: 0 };
   }).sort((a, b) => b.score - a.score).map((s, i) => ({ ...s, rank: i + 1 }));
+  // bySubject breakdown
+  const subjectScores: Record<number, { name: string; color: string | null; scores: number[] }> = {};
+  for (const row of completed) {
+    const subId = row.exams.subjectId;
+    if (!subId) continue;
+    if (!subjectScores[subId]) subjectScores[subId] = { name: "", color: null, scores: [] };
+    const sc = parseFloat(String(row.exam_sessions.score ?? 0));
+    const mx = parseFloat(String(row.exam_sessions.maxScore ?? 10));
+    subjectScores[subId].scores.push(mx > 0 ? (sc / mx) * 10 : 0);
+  }
+  // fetch subject names
+  const subIds = Object.keys(subjectScores).map(Number);
+  if (subIds.length > 0) {
+    const { subjectsTable } = await import("@workspace/db");
+    const subs = await db.select().from(subjectsTable).where(inArray(subjectsTable.id, subIds));
+    subs.forEach(s => { if (subjectScores[s.id]) { subjectScores[s.id].name = s.name; subjectScores[s.id].color = s.color ?? null; } });
+  }
+  const bySubject = Object.entries(subjectScores).map(([subId, data]) => ({
+    subjectId: parseInt(subId), subjectName: data.name, color: data.color,
+    averageScore: data.scores.length ? data.scores.reduce((a, b) => a + b, 0) / data.scores.length : null,
+    totalAttempts: data.scores.length,
+  }));
+
   res.json({
     classId: id,
     averageScore: avgScore,
     completionRate: sessions.length > 0 ? completed.length / sessions.length : 0,
     ranking,
-    bySubject: [],
+    bySubject,
     examsTaken: completed.length,
   });
 });

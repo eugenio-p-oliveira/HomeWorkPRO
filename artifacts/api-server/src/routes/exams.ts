@@ -154,10 +154,10 @@ router.get("/:id/report", async (req, res) => {
   const completed = sessions.filter(s => s.status === "submitted");
   const scores = completed.map(s => parseFloat(String(s.score ?? 0)));
   const avgScore = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
-  const avgTime = completed.filter(s => s.submittedAt).map(s =>
+  const avgTimes = completed.filter(s => s.submittedAt).map(s =>
     (s.submittedAt!.getTime() - s.startedAt.getTime()) / 60000
   );
-  const avgTimeMinutes = avgTime.length ? avgTime.reduce((a, b) => a + b, 0) / avgTime.length : null;
+  const averageTimeMinutes = avgTimes.length ? avgTimes.reduce((a, b) => a + b, 0) / avgTimes.length : null;
   const questions = await db.select().from(questionsTable).where(eq(questionsTable.examId, id));
   const sessionIds = completed.map(s => s.id);
   let answers: any[] = [];
