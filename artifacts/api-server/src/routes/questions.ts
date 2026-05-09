@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, questionsTable, questionOptionsTable, examsTable } from "@workspace/db";
-import { eq, and, sql, count } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 
 const router = Router({ mergeParams: true });
@@ -16,7 +16,7 @@ router.get("/", async (req, res) => {
   const qIds = questions.map(q => q.id);
   let options: any[] = [];
   if (qIds.length > 0) {
-    options = await db.select().from(questionOptionsTable).where(sql`question_id = ANY(${qIds})`);
+    options = await db.select().from(questionOptionsTable).where(inArray(questionOptionsTable.questionId, qIds));
   }
   const optsByQ: Record<number, any[]> = {};
   options.forEach(o => { if (!optsByQ[o.questionId]) optsByQ[o.questionId] = []; optsByQ[o.questionId].push(o); });

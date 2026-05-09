@@ -3,7 +3,7 @@ import {
   db, examsTable, examSessionsTable, studentAnswersTable, questionsTable,
   questionOptionsTable, classStudentsTable, activityLogTable
 } from "@workspace/db";
-import { eq, and, sql, count } from "drizzle-orm";
+import { eq, and, sql, count, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();
@@ -15,7 +15,9 @@ async function buildSessionResult(sessionId: number) {
   const [exam] = await db.select().from(examsTable).where(eq(examsTable.id, session.examId));
   const questions = await db.select().from(questionsTable).where(eq(questionsTable.examId, session.examId)).orderBy(questionsTable.order);
   const qIds = questions.map(q => q.id);
-  const options = qIds.length > 0 ? await db.select().from(questionOptionsTable).where(sql`question_id = ANY(${qIds})`) : [];
+  const options = qIds.length > 0
+    ? await db.select().from(questionOptionsTable).where(inArray(questionOptionsTable.questionId, qIds))
+    : [];
   const answers = await db.select().from(studentAnswersTable).where(eq(studentAnswersTable.sessionId, sessionId));
   const answerMap = Object.fromEntries(answers.map(a => [a.questionId, a]));
   const correctOpts = Object.fromEntries(options.filter(o => o.isCorrect).map(o => [o.questionId, o.id]));
@@ -110,7 +112,9 @@ async function buildSessionExamDetail(examId: number, session: any) {
   const [exam] = await db.select().from(examsTable).where(eq(examsTable.id, examId));
   const questions = await db.select().from(questionsTable).where(eq(questionsTable.examId, examId)).orderBy(questionsTable.order);
   const qIds = questions.map(q => q.id);
-  const options = qIds.length > 0 ? await db.select().from(questionOptionsTable).where(sql`question_id = ANY(${qIds})`) : [];
+  const options = qIds.length > 0
+    ? await db.select().from(questionOptionsTable).where(inArray(questionOptionsTable.questionId, qIds))
+    : [];
   const optsByQ: Record<number, any[]> = {};
   options.forEach(o => { if (!optsByQ[o.questionId]) optsByQ[o.questionId] = []; optsByQ[o.questionId].push(o); });
   const answers = await db.select().from(studentAnswersTable).where(eq(studentAnswersTable.sessionId, session.id));

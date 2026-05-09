@@ -58,6 +58,11 @@ _Populate as you build — explicit user instructions worth remembering across s
 - Never call service ports directly (e.g. port 8080) — always go through the proxy at `localhost:80`.
 - `getListClassesQueryKey` requires params argument (can be empty object `{}`).
 - The `useLogout` hook is a mutation (POST /api/auth/logout) — handle its `onSettled` to call `logout()` from AuthContext.
+- **drizzle-orm `inArray` with node-postgres**: `inArray(col, ids)` generates `col IN ($1, $2)` which works correctly. Do NOT use `sql\`col = ANY(${ids})\`` — it generates `= ANY(($1,$2))` (ROW constructor) which PostgreSQL rejects. Always use `inArray` from `drizzle-orm`.
+- **`classStudentsTable.studentId`** had a wrong FK referencing `tenantsTable` instead of `usersTable` — was fixed in `lib/db/src/schema/academic.ts` and migrated with `push-force`.
+- **Radix UI `<SelectItem>`**: `value=""` (empty string) is forbidden — use a sentinel like `"_none"` and convert back in `onValueChange`.
+- **Wouter `<Link>`**: renders as `<a>`, do NOT nest another `<a>` inside. Pass `className` directly to `<Link>`.
+- **Seed script**: `pnpm --filter @workspace/scripts run seed` — idempotent, safe to re-run. Credentials: admin `admin@teste.com / senha123`, alunos `nome.sobrenome@aluno.escolateste.com / senha123`.
 
 ## Pointers
 

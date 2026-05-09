@@ -3,7 +3,7 @@ import {
   db, subjectsTable, topicsTable, seriesTable, classesTable, classStudentsTable, usersTable,
   examSessionsTable, examsTable, studentAnswersTable, questionsTable
 } from "@workspace/db";
-import { eq, and, count, avg, sql } from "drizzle-orm";
+import { eq, and, count, avg, sql, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();
@@ -51,16 +51,16 @@ router.get("/topics", async (req, res) => {
   const subjectId = req.query.subjectId ? parseInt(req.query.subjectId as string) : undefined;
   let topics;
   if (subjectId) {
-    topics = await db.select().from(topicsTable)
+    const rows = await db.select().from(topicsTable)
       .innerJoin(subjectsTable, eq(topicsTable.subjectId, subjectsTable.id))
       .where(and(eq(topicsTable.subjectId, subjectId), eq(subjectsTable.tenantId, tenant.id)));
-    topics = topics.map(t => ({ ...t.topics, createdAt: t.topics.createdAt.toISOString() }));
+    topics = rows.map(t => ({ ...t.topics, createdAt: t.topics.createdAt.toISOString() }));
   } else {
     const allSubjects = await db.select({ id: subjectsTable.id }).from(subjectsTable).where(eq(subjectsTable.tenantId, tenant.id));
     const subjectIds = allSubjects.map(s => s.id);
     if (subjectIds.length === 0) { res.json([]); return; }
-    topics = await db.select().from(topicsTable).where(sql`subject_id = ANY(${subjectIds})`);
-    topics = topics.map(t => ({ ...t, createdAt: t.createdAt.toISOString() }));
+    const rows = await db.select().from(topicsTable).where(inArray(topicsTable.subjectId, subjectIds));
+    topics = rows.map(t => ({ ...t, createdAt: t.createdAt.toISOString() }));
   }
   res.json(topics);
 });
@@ -113,7 +113,7 @@ router.get("/classes", async (req, res) => {
   let studentCounts: Record<number, number> = {};
   if (classIds.length > 0) {
     const counts = await db.select({ classId: classStudentsTable.classId, cnt: count() })
-      .from(classStudentsTable).where(sql`class_id = ANY(${classIds})`).groupBy(classStudentsTable.classId);
+      .from(classStudentsTable).where(inArray(classStudentsTable.classId, classIds)).groupBy(classStudentsTable.classId);
     studentCounts = Object.fromEntries(counts.map(c => [c.classId, Number(c.cnt)]));
   }
   res.json(classes.map(c => ({ ...c, studentsCount: studentCounts[c.id] ?? 0, createdAt: c.createdAt.toISOString() })));
@@ -136,7 +136,7 @@ router.get("/classes/:id", async (req, res) => {
   const studentIds = enrollments.map(e => e.studentId);
   let students: any[] = [];
   if (studentIds.length > 0) {
-    const rawStudents = await db.select().from(usersTable).where(sql`id = ANY(${studentIds})`);
+    const rawStudents = await db.select().from(usersTable).where(inArray(usersTable.id, studentIds));
     students = rawStudents.map(s => {
       const { passwordHash: _, ...safe } = s;
       return { ...safe, createdAt: safe.createdAt.toISOString(), updatedAt: safe.updatedAt.toISOString() };
@@ -185,7 +185,7 @@ router.get("/classes/:id/stats", async (req, res) => {
   }
   const sessions = await db.select().from(examSessionsTable)
     .innerJoin(examsTable, eq(examSessionsTable.examId, examsTable.id))
-    .where(and(sql`exam_sessions.student_id = ANY(${studentIds})`, eq(examsTable.tenantId, tenant.id)));
+    .where(and(inArray(examSessionsTable.studentId, studentIds), eq(examsTable.tenantId, tenant.id)));
   const completed = sessions.filter(s => s.exam_sessions.status === "submitted");
   const scores = completed.map(s => parseFloat(String(s.exam_sessions.score ?? 0)));
   const avgScore = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
@@ -195,7 +195,7 @@ router.get("/classes/:id/stats", async (req, res) => {
     if (!studentScores[sid]) studentScores[sid] = [];
     if (s.exam_sessions.score) studentScores[sid].push(parseFloat(String(s.exam_sessions.score)));
   });
-  const studentData = await db.select().from(usersTable).where(sql`id = ANY(${studentIds})`);
+  const studentData = await db.select().from(usersTable).where(inArray(usersTable.id, studentIds));
   const ranking = studentData.map(u => {
     const sc = studentScores[u.id] ?? [];
     const avg = sc.length ? sc.reduce((a, b) => a + b, 0) / sc.length : 0;
