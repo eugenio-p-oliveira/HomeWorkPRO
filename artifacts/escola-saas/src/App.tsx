@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { GuardianAuthProvider, useGuardianAuth } from "@/lib/guardian-auth";
 
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
@@ -22,6 +23,9 @@ import StudentDashboardPage from "@/pages/student-dashboard";
 import StudentExamPage from "@/pages/student-exam";
 import StudentResultPage from "@/pages/student-result";
 import StudentProfilePage from "@/pages/student-profile";
+import GuardianLoginPage from "@/pages/guardian-login";
+import GuardianDashboardPage from "@/pages/guardian-dashboard";
+import LandingPage from "@/pages/landing";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -78,6 +82,24 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
   return <Component />;
 }
 
+function GuardianRoute({ component: Component }: { component: React.ComponentType }) {
+  const { guardian, isLoading, isAuthenticated } = useGuardianAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-muted-foreground text-sm">Carregando...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !guardian) {
+    return <Redirect to="/guardian/login" />;
+  }
+
+  return <Component />;
+}
+
 const ADMIN_ROLES = ["admin", "coordinator", "teacher"];
 const ADMIN_CREATE = ["admin", "coordinator"];
 
@@ -90,6 +112,12 @@ function Router() {
       </Route>
       <Route path="/register">
         <PublicRoute component={RegisterPage} />
+      </Route>
+      <Route path="/guardian/login">
+        <GuardianLoginPage />
+      </Route>
+      <Route path="/">
+        <LandingPage />
       </Route>
 
       {/* Admin / Staff */}
@@ -141,9 +169,9 @@ function Router() {
         <ProtectedRoute component={StudentDashboardPage} allowedRoles={["student"]} />
       </Route>
 
-      {/* Root redirect */}
-      <Route path="/">
-        <Redirect to="/login" />
+      {/* Guardian */}
+      <Route path="/guardian">
+        <GuardianRoute component={GuardianDashboardPage} />
       </Route>
 
       <Route component={NotFound} />
@@ -155,12 +183,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster richColors position="top-right" />
-        </TooltipProvider>
+        <GuardianAuthProvider>
+          <TooltipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster richColors position="top-right" />
+          </TooltipProvider>
+        </GuardianAuthProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

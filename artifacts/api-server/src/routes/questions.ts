@@ -6,9 +6,13 @@ import { requireAuth } from "../lib/auth";
 const router = Router({ mergeParams: true });
 router.use(requireAuth);
 
+function getExamId(req: any) {
+  return parseInt(req.params.examId as string);
+}
+
 // GET /api/exams/:examId/questions
 router.get("/", async (req, res) => {
-  const examId = parseInt(req.params.examId);
+  const examId = getExamId(req);
   const tenant = (req as any).tenant;
   const [exam] = await db.select().from(examsTable).where(and(eq(examsTable.id, examId), eq(examsTable.tenantId, tenant.id)));
   if (!exam) { res.status(404).json({ error: "Not found" }); return; }
@@ -28,7 +32,7 @@ router.get("/", async (req, res) => {
 
 // POST /api/exams/:examId/questions
 router.post("/", async (req, res) => {
-  const examId = parseInt(req.params.examId);
+  const examId = getExamId(req);
   const tenant = (req as any).tenant;
   const [exam] = await db.select().from(examsTable).where(and(eq(examsTable.id, examId), eq(examsTable.tenantId, tenant.id)));
   if (!exam) { res.status(404).json({ error: "Not found" }); return; }

@@ -45,10 +45,10 @@ export default function StudentProfilePage() {
   }));
 
   // Timeline chart data
-  const timelineData = timeline.map((t, i) => ({
+  const timelineData = (timeline as any[]).map((t, i) => ({
     name: `P${i + 1}`,
-    percentage: Math.round(t.percentage),
-    date: new Date(t.submittedAt ?? new Date()).toLocaleDateString("pt-BR"),
+    percentage: Math.round(t.percentage as number),
+    date: new Date(t.submittedAt as string ?? new Date()).toLocaleDateString("pt-BR"),
   }));
 
   return (

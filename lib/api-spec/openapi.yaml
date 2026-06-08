@@ -1158,6 +1158,9 @@ components:
         averageScore:
           type: number
           nullable: true
+        averagePercentage:
+          type: number
+          nullable: true
         bestScore:
           type: number
           nullable: true
@@ -1165,6 +1168,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SubjectPerformance"
+        timeline:
+          type: array
+          items:
+            type: object
         recentSessions:
           type: array
           items:
@@ -1685,6 +1692,9 @@ components:
         subjectName:
           type: string
         averageScore:
+          type: number
+          nullable: true
+        averagePercentage:
           type: number
           nullable: true
         totalAttempts:

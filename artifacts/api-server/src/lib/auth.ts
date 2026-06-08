@@ -12,11 +12,11 @@ export function generateToken(userId: number, tenantId: number): string {
   return Buffer.from(payload).toString("base64");
 }
 
-export function verifyToken(token: string): { userId: number; tenantId: number } | null {
+export function verifyToken(token: string): { userId: number; tenantId: number; guardianId?: number } | null {
   try {
     const payload = JSON.parse(Buffer.from(token, "base64").toString("utf8"));
     if (payload.exp < Date.now()) return null;
-    return { userId: payload.userId, tenantId: payload.tenantId };
+    return { userId: payload.userId, tenantId: payload.tenantId, guardianId: payload.guardianId };
   } catch {
     return null;
   }

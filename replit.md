@@ -1,6 +1,6 @@
 # EduSaaS — Plataforma Educacional Multi-tenant
 
-Plataforma SaaS completa para gestão escolar: criação de provas com correção automática, estrutura acadêmica (séries, turmas, disciplinas), interface de aluno com timer, e relatórios pedagógicos avançados.
+Plataforma SaaS completa para gestão escolar: criação de provas com correção automática, estrutura acadêmica (séries, turmas, disciplinas), interface de aluno com timer, portal de responsáveis, e relatórios pedagógicos avançados com landing page de planos.
 
 ## Run & Operate
 
@@ -30,7 +30,8 @@ Plataforma SaaS completa para gestão escolar: criação de provas com correçã
 - `artifacts/api-server/src/routes/` — all backend route handlers
 - `artifacts/escola-saas/src/pages/` — all frontend page components
 - `artifacts/escola-saas/src/components/Layout.tsx` — shared sidebar layout + PageHeader
-- `artifacts/escola-saas/src/lib/auth.tsx` — AuthContext, AuthProvider, useAuth hook
+- `artifacts/escola-saas/src/lib/auth.tsx` — AuthContext para staff/aluno
+- `artifacts/escola-saas/src/lib/guardian-auth.tsx` — AuthContext para responsáveis
 - `artifacts/escola-saas/src/index.css` — Tailwind theme vars (deep blue primary)
 
 ## Architecture decisions
@@ -43,10 +44,12 @@ Plataforma SaaS completa para gestão escolar: criação de provas com correçã
 
 ## Product
 
-- **Admin/Coordinator**: Dashboard with institution stats, exam management (create → add questions → publish), user management, classes/series/subjects hierarchy, pedagogical reports with charts.
-- **Teacher**: Exam creation, class management, student performance reports.
-- **Student**: Browse available exams, take exams with countdown timer, view detailed results with answer-by-answer breakdown and explanations.
-- **Exam types**: ENEM style, Simulado, traditional Prova, Atividade (homework) — each with optional time limit, scheduling, public/private flags.
+- **Admin/Coordinator**: Dashboard with institution stats, exam management, user management, classes/series/subjects, pedagogical reports with charts, send messages to guardians.
+- **Teacher**: Exam creation, class management, student performance reports, send messages to guardians.
+- **Student**: Browse exams, take exams with countdown timer, view detailed results.
+- **Guardian/Parent**: Dedicated portal with desempenho por aluno, radar chart por disciplina, mensagens da escola, calendário de eventos, dicas pedagógicas. Login: `maria.alves@teste.com / senha123`.
+- **Landing page**: Página pública (`/`) com hero, 6 recursos, passo a passo, 4 planos de preço (Inicial R$79, Intermediário R$179, Robusto R$349, Customizado sob consulta).
+- **Exam types**: ENEM, Simulado, Prova tradicional, Atividade — com timer, agendamento, múltiplas tentativas.
 
 ## User preferences
 
@@ -63,6 +66,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 - **Radix UI `<SelectItem>`**: `value=""` (empty string) is forbidden — use a sentinel like `"_none"` and convert back in `onValueChange`.
 - **Wouter `<Link>`**: renders as `<a>`, do NOT nest another `<a>` inside. Pass `className` directly to `<Link>`.
 - **Seed script**: `pnpm --filter @workspace/scripts run seed` — idempotent, safe to re-run. Credentials: admin `admin@teste.com / senha123`, alunos `nome.sobrenome@aluno.escolateste.com / senha123`.
+- **Seed responsáveis**: `pnpm --filter @workspace/scripts exec tsx ./src/seed_parents.ts` — cria 35 responsáveis, vincula a alunos, 10 eventos, 12 dicas, 12 mensagens. Login responsável: `maria.alves@teste.com / senha123`.
 
 ## Pointers
 

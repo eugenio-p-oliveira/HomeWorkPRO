@@ -251,16 +251,19 @@ export const GetUserStatsResponse = zod.object({
   userId: zod.number(),
   totalExamsTaken: zod.number(),
   averageScore: zod.number().nullish(),
+  averagePercentage: zod.number().nullish(),
   bestScore: zod.number().nullish(),
   bySubject: zod.array(
     zod.object({
       subjectId: zod.number(),
       subjectName: zod.string(),
       averageScore: zod.number().nullish(),
+      averagePercentage: zod.number().nullish(),
       totalAttempts: zod.number(),
       color: zod.string().nullish(),
     }),
   ),
+  timeline: zod.array(zod.object({}).passthrough()).optional(),
   recentSessions: zod.array(
     zod.object({
       sessionId: zod.number(),
@@ -547,6 +550,7 @@ export const GetClassStatsResponse = zod.object({
       subjectId: zod.number(),
       subjectName: zod.string(),
       averageScore: zod.number().nullish(),
+      averagePercentage: zod.number().nullish(),
       totalAttempts: zod.number(),
       color: zod.string().nullish(),
     }),
@@ -1097,6 +1101,7 @@ export const GetReportsOverviewResponse = zod.object({
       subjectId: zod.number(),
       subjectName: zod.string(),
       averageScore: zod.number().nullish(),
+      averagePercentage: zod.number().nullish(),
       totalAttempts: zod.number(),
       color: zod.string().nullish(),
     }),
@@ -1110,6 +1115,7 @@ export const GetSubjectPerformanceResponseItem = zod.object({
   subjectId: zod.number(),
   subjectName: zod.string(),
   averageScore: zod.number().nullish(),
+  averagePercentage: zod.number().nullish(),
   totalAttempts: zod.number(),
   color: zod.string().nullish(),
 });

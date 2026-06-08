@@ -138,10 +138,13 @@ export interface UpdateUserBody {
   registrationNumber?: string | null;
 }
 
+export type StudentStatsTimelineItem = { [key: string]: unknown };
+
 export interface SubjectPerformance {
   subjectId: number;
   subjectName: string;
   averageScore?: number | null;
+  averagePercentage?: number | null;
   totalAttempts: number;
   color?: string | null;
 }
@@ -161,8 +164,10 @@ export interface StudentStats {
   userId: number;
   totalExamsTaken: number;
   averageScore?: number | null;
+  averagePercentage?: number | null;
   bestScore?: number | null;
   bySubject: SubjectPerformance[];
+  timeline?: StudentStatsTimelineItem[];
   recentSessions: SessionSummary[];
 }
 
