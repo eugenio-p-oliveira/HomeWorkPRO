@@ -21,6 +21,7 @@ import SettingsPage from "@/pages/settings";
 import StudentDashboardPage from "@/pages/student-dashboard";
 import StudentExamPage from "@/pages/student-exam";
 import StudentResultPage from "@/pages/student-result";
+import StudentProfilePage from "@/pages/student-profile";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -109,6 +110,9 @@ function Router() {
       </Route>
       <Route path="/classes/:id">
         {(params) => <ProtectedRoute component={() => <ClassDetailPage />} allowedRoles={ADMIN_ROLES} />}
+      </Route>
+      <Route path="/students/:id">
+        {(params) => <ProtectedRoute component={() => <StudentProfilePage />} allowedRoles={ADMIN_ROLES} />}
       </Route>
       <Route path="/classes">
         <ProtectedRoute component={ClassesPage} allowedRoles={ADMIN_ROLES} />

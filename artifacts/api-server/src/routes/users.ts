@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, examSessionsTable, examsTable, subjectsTable, questionsTable, studentAnswersTable } from "@workspace/db";
-import { eq, and, sql, ilike, avg, count } from "drizzle-orm";
+import { eq, and, sql, ilike, avg, count, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { hashPassword } from "../lib/auth";
 
@@ -74,13 +74,54 @@ router.get("/:userId/stats", async (req, res) => {
   const userId = parseInt(req.params.userId);
   const sessions = await db.select().from(examSessionsTable)
     .innerJoin(examsTable, eq(examSessionsTable.examId, examsTable.id))
-    .where(and(eq(examSessionsTable.studentId, userId), eq(examsTable.tenantId, tenant.id)));
+    .where(and(eq(examSessionsTable.studentId, userId), eq(examsTable.tenantId, tenant.id)))
+    .orderBy(examSessionsTable.submittedAt);
 
   const completed = sessions.filter(s => s.exam_sessions.status === "submitted");
   const scores = completed.map(s => parseFloat(String(s.exam_sessions.score ?? 0)));
+  const maxScores = completed.map(s => parseFloat(String(s.exam_sessions.maxScore ?? 10)));
   const avgScore = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
   const bestScore = scores.length ? Math.max(...scores) : null;
+  const percentages = scores.map((sc, i) => maxScores[i] > 0 ? (sc / maxScores[i]) * 100 : 0);
+  const averagePercentage = percentages.length ? percentages.reduce((a, b) => a + b, 0) / percentages.length : null;
 
+  // bySubject breakdown
+  const subjectScores: Record<number, { name: string; color: string | null; scores: number[]; pcts: number[] }> = {};
+  for (const row of completed) {
+    const subId = row.exams.subjectId;
+    if (!subId) continue;
+    if (!subjectScores[subId]) subjectScores[subId] = { name: "", color: null, scores: [], pcts: [] };
+    const sc = parseFloat(String(row.exam_sessions.score ?? 0));
+    const mx = parseFloat(String(row.exam_sessions.maxScore ?? 10));
+    subjectScores[subId].scores.push(mx > 0 ? (sc / mx) * 10 : 0);
+    subjectScores[subId].pcts.push(mx > 0 ? (sc / mx) * 100 : 0);
+  }
+  const subIds = Object.keys(subjectScores).map(Number);
+  if (subIds.length > 0) {
+    const subs = await db.select().from(subjectsTable).where(inArray(subjectsTable.id, subIds));
+    subs.forEach(s => { if (subjectScores[s.id]) { subjectScores[s.id].name = s.name; subjectScores[s.id].color = s.color ?? null; } });
+  }
+  const bySubject = Object.entries(subjectScores).map(([subId, data]) => ({
+    subjectId: parseInt(subId), subjectName: data.name, color: data.color,
+    averageScore: data.scores.length ? data.scores.reduce((a, b) => a + b, 0) / data.scores.length : null,
+    averagePercentage: data.pcts.length ? data.pcts.reduce((a, b) => a + b, 0) / data.pcts.length : null,
+    totalAttempts: data.scores.length,
+  }));
+
+  // Timeline: all completed sessions with dates
+  const timeline = completed.map(s => ({
+    sessionId: s.exam_sessions.id,
+    examId: s.exams.id,
+    examTitle: s.exams.title,
+    examType: s.exams.type,
+    subjectId: s.exams.subjectId,
+    score: parseFloat(String(s.exam_sessions.score ?? 0)),
+    maxScore: parseFloat(String(s.exam_sessions.maxScore ?? 10)),
+    percentage: s.exam_sessions.maxScore ? parseFloat(String(s.exam_sessions.score ?? 0)) / parseFloat(String(s.exam_sessions.maxScore)) * 100 : 0,
+    submittedAt: s.exam_sessions.submittedAt?.toISOString() ?? null,
+  }));
+
+  // Recent sessions with detail
   const recentSessions = completed.slice(-5).map(s => ({
     sessionId: s.exam_sessions.id,
     examId: s.exams.id,
@@ -98,8 +139,10 @@ router.get("/:userId/stats", async (req, res) => {
     userId,
     totalExamsTaken: completed.length,
     averageScore: avgScore,
+    averagePercentage,
     bestScore,
-    bySubject: [],
+    bySubject,
+    timeline,
     recentSessions,
   });
 });

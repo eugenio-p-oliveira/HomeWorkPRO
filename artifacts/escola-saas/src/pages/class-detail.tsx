@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Users, TrendingUp, Trophy, Plus } from "lucide-react";
+import { ArrowLeft, Users, TrendingUp, Trophy, Plus, Eye } from "lucide-react";
 import { shiftLabel, getScoreColor, getScoreBg } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -90,6 +90,11 @@ export default function ClassDetailPage() {
                           <div className="text-xs text-muted-foreground">{s.email}</div>
                         </div>
                         {s.registrationNumber && <span className="text-xs text-muted-foreground">{s.registrationNumber}</span>}
+                        <Link href={`/students/${s.id}`}>
+                          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
+                            <Eye className="w-3 h-3 mr-1" />Ver
+                          </Button>
+                        </Link>
                       </div>
                     ))}
                   </div>
