@@ -1669,10 +1669,13 @@ components:
           type: number
           nullable: true
         topPerformingClass:
-          type: string
+          $ref: "#/components/schemas/ClassPerformance"
+          nullable: true
+        lowestPerformingClass:
+          $ref: "#/components/schemas/ClassPerformance"
           nullable: true
         mostDifficultSubject:
-          type: string
+          $ref: "#/components/schemas/SubjectPerformance"
           nullable: true
         monthlyActivity:
           type: array
@@ -1682,7 +1685,64 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SubjectPerformance"
+        classStats:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClassStat"
+        atRiskStudents:
+          type: array
+          items:
+            $ref: "#/components/schemas/AtRiskStudent"
       required: [totalExamsSessions, monthlyActivity, subjectBreakdown]
+
+    ClassStat:
+      type: object
+      properties:
+        classId:
+          type: integer
+        className:
+          type: string
+        averageScore:
+          type: number
+        count:
+          type: integer
+        studentsCount:
+          type: integer
+        shift:
+          type: string
+      required: [classId, className, averageScore, count, studentsCount, shift]
+
+    AtRiskStudent:
+      type: object
+      properties:
+        studentId:
+          type: integer
+        studentName:
+          type: string
+        averagePercentage:
+          type: number
+        trendSlope:
+          type: number
+        riskLevel:
+          type: string
+        riskLabel:
+          type: string
+        riskColor:
+          type: string
+        examsCount:
+          type: integer
+      required: [studentId, studentName, averagePercentage, trendSlope, riskLevel, riskLabel, riskColor, examsCount]
+
+    ClassPerformance:
+      type: object
+      properties:
+        classId:
+          type: integer
+        className:
+          type: string
+        averageScore:
+          type: number
+      required: [classId, className, averageScore]
 
     SubjectPerformance:
       type: object

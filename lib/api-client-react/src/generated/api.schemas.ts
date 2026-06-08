@@ -495,19 +495,48 @@ export interface SessionResult {
   questionResults: QuestionResult[];
 }
 
+export interface ClassPerformance {
+  classId: number;
+  className: string;
+  averageScore: number;
+}
+
 export interface MonthlyActivity {
   month: string;
   sessionsCount: number;
   averageScore?: number | null;
 }
 
+export interface ClassStat {
+  classId: number;
+  className: string;
+  averageScore: number;
+  count: number;
+  studentsCount: number;
+  shift: string;
+}
+
+export interface AtRiskStudent {
+  studentId: number;
+  studentName: string;
+  averagePercentage: number;
+  trendSlope: number;
+  riskLevel: string;
+  riskLabel: string;
+  riskColor: string;
+  examsCount: number;
+}
+
 export interface ReportsOverview {
   totalExamsSessions: number;
   averageScoreAllTime?: number | null;
-  topPerformingClass?: string | null;
-  mostDifficultSubject?: string | null;
+  topPerformingClass?: ClassPerformance | null;
+  lowestPerformingClass?: ClassPerformance | null;
+  mostDifficultSubject?: SubjectPerformance | null;
   monthlyActivity: MonthlyActivity[];
   subjectBreakdown: SubjectPerformance[];
+  classStats?: ClassStat[];
+  atRiskStudents?: AtRiskStudent[];
 }
 
 export type ActivityItemType =

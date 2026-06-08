@@ -1087,8 +1087,30 @@ export const GetSessionResultResponse = zod.object({
 export const GetReportsOverviewResponse = zod.object({
   totalExamsSessions: zod.number(),
   averageScoreAllTime: zod.number().nullish(),
-  topPerformingClass: zod.string().nullish(),
-  mostDifficultSubject: zod.string().nullish(),
+  topPerformingClass: zod
+    .object({
+      classId: zod.number(),
+      className: zod.string(),
+      averageScore: zod.number(),
+    })
+    .nullish(),
+  lowestPerformingClass: zod
+    .object({
+      classId: zod.number(),
+      className: zod.string(),
+      averageScore: zod.number(),
+    })
+    .nullish(),
+  mostDifficultSubject: zod
+    .object({
+      subjectId: zod.number(),
+      subjectName: zod.string(),
+      averageScore: zod.number().nullish(),
+      averagePercentage: zod.number().nullish(),
+      totalAttempts: zod.number(),
+      color: zod.string().nullish(),
+    })
+    .nullish(),
   monthlyActivity: zod.array(
     zod.object({
       month: zod.string(),
@@ -1106,6 +1128,32 @@ export const GetReportsOverviewResponse = zod.object({
       color: zod.string().nullish(),
     }),
   ),
+  classStats: zod
+    .array(
+      zod.object({
+        classId: zod.number(),
+        className: zod.string(),
+        averageScore: zod.number(),
+        count: zod.number(),
+        studentsCount: zod.number(),
+        shift: zod.string(),
+      }),
+    )
+    .optional(),
+  atRiskStudents: zod
+    .array(
+      zod.object({
+        studentId: zod.number(),
+        studentName: zod.string(),
+        averagePercentage: zod.number(),
+        trendSlope: zod.number(),
+        riskLevel: zod.string(),
+        riskLabel: zod.string(),
+        riskColor: zod.string(),
+        examsCount: zod.number(),
+      }),
+    )
+    .optional(),
 });
 
 /**

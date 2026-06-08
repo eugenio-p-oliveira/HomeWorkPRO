@@ -167,7 +167,7 @@ async function main() {
     for (let i = 0; i < msgs.length; i++) {
       const gId = gIds[i % gIds.length];
       const sId = sIds[i % sIds.length];
-      const senderId = teacherIds[i % teacherIds.length] ?? ADMIN_ID;
+      const senderId = teacherIds[i % teacherIds.length] ?? 1;
       await db.insert(parentMessagesTable).values({
         tenantId: TENANT_ID, guardianId: gId, studentId: sId, senderId,
         type: msgs[i].type, title: msgs[i].title, body: msgs[i].body,

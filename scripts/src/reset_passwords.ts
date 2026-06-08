@@ -8,7 +8,7 @@ function hashPassword(p: string) {
 async function main() {
   const hash = hashPassword("senha123");
   const result = await db.update(usersTable).set({ passwordHash: hash });
-  console.log(`✅ Senha atualizada para ${result.length} usuários`);
+  console.log(`✅ Senha atualizada para todos os usuários`);
   await pool.end();
 }
 
