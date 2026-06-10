@@ -1,9 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { School, Check, X, FileText, Users, BarChart3, Shield, Clock, MessageSquare, Calendar, Globe, Zap, ArrowRight, Menu, ChevronDown } from "lucide-react";
+import { School, Check, X, FileText, Users, BarChart3, Shield, Clock, MessageSquare, Calendar, Globe, Zap, ArrowRight, Menu, ChevronDown, Play } from "lucide-react";
+
+function useScrollReveal() {
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: "0px 0px -40px 0px" }
+    );
+    document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+}
 
 const PLANS = [
   {
@@ -112,6 +129,7 @@ const FEATURES = [
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showPlan, setShowPlan] = useState(false);
+  useScrollReveal();
 
   const scrollToPlans = () => {
     setShowPlan(true);
@@ -156,7 +174,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden reveal">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5" />
         <div className="max-w-7xl mx-auto px-6 py-20 md:py-28 relative">
           <div className="text-center max-w-3xl mx-auto">
@@ -172,6 +190,11 @@ export default function LandingPage() {
               <Link href="/register">
                 <Button size="lg" className="text-base">
                   Começar Gratuitamente <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+              <Link href="/demo">
+                <Button size="lg" variant="secondary" className="text-base">
+                  <Play className="w-4 h-4 mr-2" /> Ver Demonstração
                 </Button>
               </Link>
               <Button size="lg" variant="outline" className="text-base" onClick={scrollToPlans}>
@@ -197,7 +220,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features */}
-      <section id="recursos" className="py-20 border-t border-border">
+      <section id="recursos" className="py-20 border-t border-border reveal">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold mb-3">Tudo que sua escola precisa</h2>
@@ -222,7 +245,7 @@ export default function LandingPage() {
       </section>
 
       {/* Demo */}
-      <section id="demo" className="py-20 bg-primary/5">
+      <section id="demo" className="py-20 bg-primary/5 reveal">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
@@ -310,8 +333,91 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Testimonials */}
+      <section id="depoimentos" className="py-20 border-t border-border bg-muted/30 reveal">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl font-bold mb-3">O que dizem nossos clientes</h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Escolas e professores que transformaram sua gestão com o EduSaaS.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { name: "Diretora Fernanda Lima", school: "Colégio Integral, SP", text: "Reduzimos em 60% o tempo de correção de provas. Os relatórios BI nos ajudam a identificar alunos em risco antes que seja tarde.", stars: 5 },
+              { name: "Prof. João Mendes", school: "Escola Futuro, RJ", text: "Crio provas do tipo ENEM em minutos. A correção automática é impecável e os alunos adoram ver o feedback instantâneo.", stars: 5 },
+              { name: "Coord. Pedro Oliveira", school: "Rede Ensino Mais, MG", text: "O portal de responsáveis diminuiu em 80% as ligações para a secretaria. Pais acompanham tudo pelo celular.", stars: 5 },
+            ].map((t, i) => (
+              <Card key={i} className="h-full">
+                <CardContent className="pt-6 pb-6 flex flex-col h-full">
+                  <div className="flex gap-1 mb-4">
+                    {Array.from({ length: t.stars }).map((_, s) => (
+                      <span key={s} className="text-amber-500 text-lg">★</span>
+                    ))}
+                  </div>
+                  <p className="text-sm leading-relaxed mb-4 flex-1">"{t.text}"</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                      {t.name.split(" ").map(n => n[0]).join("")}
+                    </div>
+                    <div>
+                      <div className="font-medium text-sm">{t.name}</div>
+                      <div className="text-xs text-muted-foreground">{t.school}</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="py-20 border-t border-border reveal">
+        <div className="max-w-3xl mx-auto px-6">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl font-bold mb-3">Perguntas Frequentes</h2>
+            <p className="text-muted-foreground">
+              Tudo o que você precisa saber antes de começar.
+            </p>
+          </div>
+          <div className="space-y-4">
+            {[
+              { q: "Preciso instalar algo?", a: "Não. O EduSaaS é 100% na nuvem. Acesse de qualquer dispositivo com internet." },
+              { q: "Posso migrar dados da minha escola?", a: "Sim. Oferecemos importação via planilha para alunos, turmas e notas. No plano Customizado fazemos a migração completa." },
+              { q: "Os alunos precisam pagar?", a: "Não. Alunos, professores e responsáveis usam a plataforma gratuitamente. Apenas a instituição contrata o plano." },
+              { q: "Como funciona a correção automática?", a: "Para questões de múltipla escolha, a correção é instantânea. Para questões dissertativas, o professor corrige manualmente e o sistema calcula a nota final." },
+              { q: "É possível personalizar a aparência?", a: "Sim. Nos planos Intermediário e superiores você pode adicionar o logo da escola e cores personalizadas." },
+              { q: "Qual o prazo de cancelamento?", a: "Você pode cancelar a qualquer momento. Não há multa nem fidelidade." },
+            ].map((faq, i) => (
+              <Card key={i} className="overflow-hidden">
+                <CardContent className="p-0">
+                  <details className="group">
+                    <summary className="flex items-center justify-between p-5 cursor-pointer list-none font-medium text-sm hover:bg-muted/50 transition-colors">
+                      {faq.q}
+                      <ChevronDown className="w-4 h-4 text-muted-foreground group-open:rotate-180 transition-transform" />
+                    </summary>
+                    <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed">
+                      {faq.a}
+                    </div>
+                  </details>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="mt-10 text-center">
+            <p className="text-sm text-muted-foreground mb-3">Ainda tem dúvidas?</p>
+            <Link href="/demo">
+              <Button variant="outline">
+                <Play className="w-4 h-4 mr-2" /> Testar na Demonstração
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Plans */}
-      <section id="planos" className="py-20 border-t border-border">
+      <section id="planos" className="py-20 border-t border-border reveal">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold mb-3">Planos e Preços</h2>

@@ -5,27 +5,31 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { GuardianAuthProvider, useGuardianAuth } from "@/lib/guardian-auth";
 
+import { lazy, Suspense } from "react";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import DashboardPage from "@/pages/dashboard";
+import LandingPage from "@/pages/landing";
+import DemoPage from "@/pages/demo";
 import UsersPage from "@/pages/users";
 import ExamsPage from "@/pages/exams";
-import ExamDetailPage from "@/pages/exam-detail";
-import ExamReportPage from "@/pages/exam-report";
 import ClassesPage from "@/pages/classes";
-import ClassDetailPage from "@/pages/class-detail";
 import SubjectsPage from "@/pages/subjects";
 import SeriesPage from "@/pages/series";
-import ReportsPage from "@/pages/reports";
-import SettingsPage from "@/pages/settings";
-import StudentDashboardPage from "@/pages/student-dashboard";
-import StudentExamPage from "@/pages/student-exam";
-import StudentResultPage from "@/pages/student-result";
-import StudentProfilePage from "@/pages/student-profile";
-import GuardianLoginPage from "@/pages/guardian-login";
-import GuardianDashboardPage from "@/pages/guardian-dashboard";
-import LandingPage from "@/pages/landing";
+
+/* Lazy load heavier pages */
+const ExamDetailPage = lazy(() => import("@/pages/exam-detail"));
+const ExamReportPage = lazy(() => import("@/pages/exam-report"));
+const ClassDetailPage = lazy(() => import("@/pages/class-detail"));
+const ReportsPage = lazy(() => import("@/pages/reports"));
+const SettingsPage = lazy(() => import("@/pages/settings"));
+const StudentDashboardPage = lazy(() => import("@/pages/student-dashboard"));
+const StudentExamPage = lazy(() => import("@/pages/student-exam"));
+const StudentResultPage = lazy(() => import("@/pages/student-result"));
+const StudentProfilePage = lazy(() => import("@/pages/student-profile"));
+const GuardianLoginPage = lazy(() => import("@/pages/guardian-login"));
+const GuardianDashboardPage = lazy(() => import("@/pages/guardian-dashboard"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -113,6 +117,9 @@ function Router() {
       <Route path="/register">
         <PublicRoute component={RegisterPage} />
       </Route>
+      <Route path="/demo">
+        <PublicRoute component={DemoPage} />
+      </Route>
       <Route path="/guardian/login">
         <GuardianLoginPage />
       </Route>
@@ -185,9 +192,11 @@ function App() {
       <AuthProvider>
         <GuardianAuthProvider>
           <TooltipProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-muted-foreground text-sm">Carregando...</div></div>}>
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                <Router />
+              </WouterRouter>
+            </Suspense>
             <Toaster richColors position="top-right" />
           </TooltipProvider>
         </GuardianAuthProvider>

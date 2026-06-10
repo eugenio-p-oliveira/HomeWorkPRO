@@ -48,7 +48,8 @@ Plataforma SaaS completa para gestão escolar: criação de provas com correçã
 - **Teacher**: Exam creation, class management, student performance reports, send messages to guardians.
 - **Student**: Browse exams, take exams with countdown timer, view detailed results.
 - **Guardian/Parent**: Dedicated portal with desempenho por aluno, radar chart por disciplina, mensagens da escola, calendário de eventos, dicas pedagógicas. Login: `maria.alves@teste.com / senha123`.
-- **Landing page**: Página pública (`/`) com hero, 6 recursos, passo a passo, 4 planos de preço (Inicial R$79, Intermediário R$179, Robusto R$349, Customizado sob consulta).
+- **Landing page**: Página pública (`/`) com hero, 6 recursos, passo a passo, depoimentos, FAQ, 4 planos de preço (Inicial R$79, Intermediário R$179, Robusto R$349, Customizado sob consulta). Animações de scroll reveal.
+- **Demo**: Página `/demo` com auto-login para 4 perfis: Admin, Professor, Aluno, Responsável. Sem cadastro necessário.
 - **Exam types**: ENEM, Simulado, Prova tradicional, Atividade — com timer, agendamento, múltiplas tentativas.
 
 ## User preferences
@@ -65,8 +66,16 @@ _Populate as you build — explicit user instructions worth remembering across s
 - **`classStudentsTable.studentId`** had a wrong FK referencing `tenantsTable` instead of `usersTable` — was fixed in `lib/db/src/schema/academic.ts` and migrated with `push-force`.
 - **Radix UI `<SelectItem>`**: `value=""` (empty string) is forbidden — use a sentinel like `"_none"` and convert back in `onValueChange`.
 - **Wouter `<Link>`**: renders as `<a>`, do NOT nest another `<a>` inside. Pass `className` directly to `<Link>`.
-- **Seed script**: `pnpm --filter @workspace/scripts run seed` — idempotent, safe to re-run. Credentials: admin `admin@teste.com / senha123`, alunos `nome.sobrenome@aluno.escolateste.com / senha123`.
-- **Seed responsáveis**: `pnpm --filter @workspace/scripts exec tsx ./src/seed_parents.ts` — cria 35 responsáveis, vincula a alunos, 10 eventos, 12 dicas, 12 mensagens. Login responsável: `maria.alves@teste.com / senha123`.
+- **Seed script**: `pnpm --filter @workspace/scripts run seed` — idempotent, safe to re-run.
+- **Seed responsáveis**: `pnpm --filter @workspace/scripts exec tsx ./src/seed_parents.ts` — cria 35 responsáveis, vincula a alunos, 10 eventos, 12 dicas, 12 mensagens.
+
+## Demo Credentials
+
+Acesse `/demo` para auto-login sem cadastro:
+- **Admin**: `admin@teste.com / senha123`
+- **Professor**: `prof.joao@teste.com / senha123`
+- **Aluno**: `beatriz.alves@aluno.escolateste.com / senha123`
+- **Responsável**: `maria.alves@teste.com / senha123` (portal separado em `/guardian/login`)
 
 ## Pointers
 
