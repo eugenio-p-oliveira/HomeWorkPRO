@@ -4,7 +4,11 @@ import { db, usersTable, tenantsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 
 export function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password + "edusaas_salt").digest("hex");
+  const normalized = password.trim(); // 🔥 evita mismatch invisível
+  return crypto
+    .createHash("sha256")
+    .update(`${normalized}edusaas_salt`)
+    .digest("hex");
 }
 
 export function generateToken(userId: number, tenantId: number): string {
