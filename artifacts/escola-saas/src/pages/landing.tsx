@@ -514,7 +514,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="mt-10 pt-6 border-t border-border text-center text-sm text-muted-foreground">
-            © 2026 EduSaaS. Todos os direitos reservados.
+            © 2026 HomeWork PRO. Todos os direitos reservados - Desenvolvido por: Eugênio Oliveira.
           </div>
         </div>
       </footer>
