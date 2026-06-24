@@ -482,7 +482,7 @@ export default function LandingPage() {
                 <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                   <School className="w-4 h-4 text-primary-foreground" />
                 </div>
-                <span className="font-bold">EduSaaS</span>
+                <span className="font-bold">HomeWorkPRO</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 Plataforma educacional multi-tenant para gestão escolar, provas e acompanhamento pedagógico.
@@ -507,9 +507,9 @@ export default function LandingPage() {
             <div>
               <h4 className="font-semibold mb-3">Contato</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
-                <p>contato@edusaas.com.br</p>
-                <p>(11) 4000-1234</p>
-                <p>São Paulo, SP</p>
+                <p>eugenio.p.oliveira@outlook.com</p>
+                <p>(86)99983-9422</p>
+                <p>Teresina - PI</p>
               </div>
             </div>
           </div>
