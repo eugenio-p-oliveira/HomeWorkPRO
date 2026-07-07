@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { db, usersTable, examSessionsTable, examsTable, subjectsTable, questionsTable, studentAnswersTable } from "@workspace/db";
 import { eq, and, sql, ilike, avg, count, inArray } from "drizzle-orm";
-import { requireAuth } from "../lib/auth";
+import { requireAuth, requireRole } from "../lib/auth";
 import { hashPassword } from "../lib/auth";
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireRole("admin", "coordinator", "teacher"));
 
 function serializeUser(u: any) {
   const { passwordHash: _, ...safe } = u;
@@ -34,7 +35,7 @@ router.post("/", async (req, res) => {
     tenantId: tenant.id,
     name,
     email,
-    passwordHash: hashPassword(password),
+    passwordHash: await hashPassword(password),
     role,
     registrationNumber,
   }).returning();

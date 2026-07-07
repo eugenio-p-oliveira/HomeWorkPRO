@@ -1,9 +1,7 @@
 import { Router } from "express";
 import { db, guardiansTable, studentGuardiansTable, usersTable, parentMessagesTable, schoolEventsTable, parentTipsTable, examSessionsTable, examsTable, subjectsTable, tenantsTable } from "@workspace/db";
 import { eq, and, desc, inArray, sql } from "drizzle-orm";
-import { hashPassword } from "../lib/auth";
-import { generateToken, verifyToken } from "../lib/auth";
-import { requireAuth } from "../lib/auth";
+import { hashPassword, verifyPasswordLegacy, generateToken, verifyToken, requireAuth } from "../lib/auth";
 
 const router = Router();
 
@@ -27,7 +25,7 @@ router.post("/guardians/login", async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) { res.status(400).json({ error: "Missing email or password" }); return; }
   const [guardian] = await db.select().from(guardiansTable).where(eq(guardiansTable.email, email));
-  if (!guardian || guardian.passwordHash !== hashPassword(password)) {
+  if (!guardian || !(await verifyPasswordLegacy(password, guardian.passwordHash))) {
     res.status(401).json({ error: "Invalid credentials" }); return;
   }
   const token = generateToken(guardian.id, guardian.tenantId); // override below
@@ -192,7 +190,13 @@ router.get("/guardians/:id/messages", requireGuardianAuth, async (req, res) => {
 });
 
 router.patch("/guardians/:id/messages/:msgId/read", requireGuardianAuth, async (req, res) => {
+  const guardianId = parseInt(req.params.id);
   const msgId = parseInt(req.params.msgId);
+  const tenantId = (req as any).tenantId;
+  // Verify message belongs to this guardian before marking read
+  const [msg] = await db.select().from(parentMessagesTable)
+    .where(and(eq(parentMessagesTable.id, msgId), eq(parentMessagesTable.guardianId, guardianId), eq(parentMessagesTable.tenantId, tenantId)));
+  if (!msg) { res.status(403).json({ error: "Forbidden" }); return; }
   await db.update(parentMessagesTable).set({ isRead: true }).where(eq(parentMessagesTable.id, msgId));
   res.json({ success: true });
 });
@@ -241,7 +245,7 @@ router.post("/guardians", requireAuth, async (req, res) => {
   if (!name || !email || !password) { res.status(400).json({ error: "Missing required fields" }); return; }
   const [guardian] = await db.insert(guardiansTable).values({
     tenantId: tenant.id, name, email, phone,
-    passwordHash: hashPassword(password),
+    passwordHash: await hashPassword(password),
   }).returning();
   res.status(201).json({ id: guardian.id, name: guardian.name, email: guardian.email, phone: guardian.phone, createdAt: guardian.createdAt.toISOString() });
 });

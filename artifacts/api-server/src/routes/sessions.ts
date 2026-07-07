@@ -88,8 +88,11 @@ router.get("/student/exams", async (req, res) => {
 
 router.post("/student/exams/:examId/start", async (req, res) => {
   const user = (req as any).user;
+  const tenant = (req as any).tenant;
   const examId = parseInt(req.params.examId);
-  const [exam] = await db.select().from(examsTable).where(eq(examsTable.id, examId));
+  // Verify user is a student
+  if (user.role !== "student") { res.status(403).json({ error: "Only students can start exams" }); return; }
+  const [exam] = await db.select().from(examsTable).where(and(eq(examsTable.id, examId), eq(examsTable.tenantId, tenant.id)));
   if (!exam) { res.status(404).json({ error: "Not found" }); return; }
   const existing = await db.select().from(examSessionsTable)
     .where(and(eq(examSessionsTable.examId, examId), eq(examSessionsTable.studentId, user.id)));

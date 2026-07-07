@@ -168,8 +168,17 @@ router.delete("/classes/:id", async (req, res) => {
 });
 
 router.post("/classes/:id/students", async (req, res) => {
+  const tenant = (req as any).tenant;
   const id = parseInt(req.params.id);
   const { studentId } = req.body;
+  // Verify class belongs to tenant
+  const [cls] = await db.select().from(classesTable)
+    .where(and(eq(classesTable.id, id), eq(classesTable.tenantId, tenant.id)));
+  if (!cls) { res.status(404).json({ error: "Class not found" }); return; }
+  // Verify student belongs to tenant
+  const [student] = await db.select().from(usersTable)
+    .where(and(eq(usersTable.id, studentId), eq(usersTable.tenantId, tenant.id)));
+  if (!student) { res.status(404).json({ error: "Student not found" }); return; }
   await db.insert(classStudentsTable).values({ classId: id, studentId }).onConflictDoNothing();
   res.json({ success: true });
 });

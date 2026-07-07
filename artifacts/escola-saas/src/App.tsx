@@ -123,6 +123,12 @@ function Router() {
       <Route path="/guardian/login">
         <GuardianLoginPage />
       </Route>
+      <Route path="/plans">
+        <Redirect to="/#planos" />
+      </Route>
+      <Route path="/pricing">
+        <Redirect to="/#planos" />
+      </Route>
       <Route path="/">
         <LandingPage />
       </Route>

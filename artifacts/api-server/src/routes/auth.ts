@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, usersTable, tenantsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { LoginBody, RegisterTenantBody } from "@workspace/api-zod";
-import { hashPassword, generateToken, requireAuth } from "../lib/auth";
+import { hashPassword, verifyPasswordLegacy, generateToken, requireAuth } from "../lib/auth";
 import slugify from "../lib/slugify";
 
 const router = Router();
@@ -18,8 +18,8 @@ router.post("/login", async (req, res) => {
     .select({ user: usersTable, tenant: tenantsTable })
     .from(usersTable)
     .innerJoin(tenantsTable, eq(usersTable.tenantId, tenantsTable.id))
-    .where(and(eq(usersTable.email, email), eq(usersTable.passwordHash, hashPassword(password))));
-  if (!user) {
+    .where(eq(usersTable.email, email));
+  if (!user || !(await verifyPasswordLegacy(password, user.user.passwordHash))) {
     res.status(401).json({ error: "Invalid credentials" });
     return;
   }
@@ -58,7 +58,7 @@ router.post("/register", async (req, res) => {
     tenantId: tenant.id,
     name: adminName,
     email,
-    passwordHash: hashPassword(password),
+    passwordHash: await hashPassword(password),
     role: "admin",
   }).returning();
   const token = generateToken(user.id, tenant.id);

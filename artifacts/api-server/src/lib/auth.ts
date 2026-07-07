@@ -1,10 +1,26 @@
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { Request, Response, NextFunction } from "express";
 import { db, usersTable, tenantsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 
-export function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password + "edusaas_salt").digest("hex");
+const SALT_ROUNDS = 12;
+
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, SALT_ROUNDS);
+}
+
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash);
+}
+
+/** Legacy fallback for SHA-256 passwords during migration to bcrypt */
+export async function verifyPasswordLegacy(password: string, hash: string): Promise<boolean> {
+  if (hash.startsWith("$2a$") || hash.startsWith("$2b$") || hash.startsWith("$2y$")) {
+    return bcrypt.compare(password, hash);
+  }
+  const legacyHash = crypto.createHash("sha256").update(password + "edusaas_salt").digest("hex");
+  return legacyHash === hash;
 }
 
 export function generateToken(userId: number, tenantId: number): string {

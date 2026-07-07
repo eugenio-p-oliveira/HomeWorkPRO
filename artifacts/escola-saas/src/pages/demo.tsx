@@ -9,7 +9,7 @@ import { Link } from "wouter";
 
 const DEMOS = [
   { role: "Administrador", email: "admin@teste.com", pass: "senha123", icon: Shield, desc: "Acesso total: Dashboard, relatórios BI, gestão de usuários e configurações" },
-  { role: "Professor", email: "prof.joao@teste.com", pass: "senha123", icon: User, desc: "Criar provas, corrigir, enviar mensagens e ver relatórios de turma" },
+  { role: "Professor", email: "carlos.mendes@escolateste.com", pass: "senha123", icon: User, desc: "Criar provas, corrigir, enviar mensagens e ver relatórios de turma" },
   { role: "Aluno", email: "beatriz.alves@aluno.escolateste.com", pass: "senha123", icon: GraduationCap, desc: "Fazer provas, ver resultados e acompanhar desempenho" },
   { role: "Responsável", email: "maria.alves@teste.com", pass: "senha123", icon: Heart, desc: "Portal do responsável: notas, mensagens, dicas e calendário" },
 ];

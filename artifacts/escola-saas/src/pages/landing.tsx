@@ -145,7 +145,7 @@ export default function LandingPage() {
             <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
               <School className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-bold text-lg">HomeworkPRO</span>
+            <span className="font-bold text-lg">EduSaaS</span>
           </div>
           <div className="hidden md:flex items-center gap-6">
             <a href="#recursos" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Recursos</a>
@@ -339,7 +339,7 @@ export default function LandingPage() {
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold mb-3">O que dizem nossos clientes</h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Escolas e professores que transformaram sua gestão com o EduSaaS.
+              Escolas e professores que transformaram sua gestão com o EduSaaS
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
