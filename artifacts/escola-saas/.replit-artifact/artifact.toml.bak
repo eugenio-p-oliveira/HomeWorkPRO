@@ -19,7 +19,7 @@ run = "pnpm --filter @workspace/escola-saas run dev"
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/escola-saas", "run", "build" ]
-publicDir = "artifacts/escola-saas/dist"
+publicDir = "artifacts/escola-saas/dist/public"
 serve = "static"
 
 [[services.production.rewrites]]
