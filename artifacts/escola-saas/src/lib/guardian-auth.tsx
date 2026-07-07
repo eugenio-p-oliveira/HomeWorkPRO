@@ -26,7 +26,7 @@ export function GuardianAuthProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (token) {
       try {
-        const payload = JSON.parse(Buffer.from(token, "base64").toString("utf8"));
+        const payload = JSON.parse(atob(token));
         if (payload.guardianId && payload.exp > Date.now()) {
           setGuardian({ id: payload.guardianId, tenantId: payload.tenantId, name: payload.name ?? "", email: payload.email ?? "" });
         } else {
