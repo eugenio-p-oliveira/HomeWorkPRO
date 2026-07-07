@@ -96,21 +96,21 @@ async function seedSubjects() {
 
 async function seedSeriesAndClasses(teacherIds: number[]) {
   const exSeries = await db.select({ id: seriesTable.id }).from(seriesTable)
-    .where(sql`name = '9\u00ba Ano' AND tenant_id = ${TENANT_ID}`);
+    .where(sql`name = '9º Ano' AND tenant_id = ${TENANT_ID}`);
   let series9Id = exSeries[0]?.id;
   if (!series9Id) {
     const [s] = await db.insert(seriesTable).values({
-      tenantId: TENANT_ID, name: "9\u00ba Ano", educationalLevel: "fundamental", order: 9,
+      tenantId: TENANT_ID, name: "9º Ano", educationalLevel: "fundamental", order: 9,
     }).returning();
     series9Id = s.id;
   }
 
   const exClass = await db.select({ id: classesTable.id }).from(classesTable)
-    .where(sql`name = '9\u00ba A' AND tenant_id = ${TENANT_ID}`);
+    .where(sql`name = '9º A' AND tenant_id = ${TENANT_ID}`);
   let classAId = exClass[0]?.id;
   if (!classAId) {
     const [c] = await db.insert(classesTable).values({
-      tenantId: TENANT_ID, name: "9\u00ba A", serieId: series9Id, shift: "manha", year: 2026,
+      tenantId: TENANT_ID, name: "9º A", serieId: series9Id, shift: "manha", year: 2026,
     }).returning();
     classAId = c.id;
   }
@@ -135,7 +135,7 @@ async function seedExams(subjectIds: number[], teacherIds: number[], classId: nu
   if (existing.length >= 3) return;
 
   const examTemplates = [
-    { title: "Prova de Matematica -- 9\u00ba Ano", subjectId: subjectIds[0], type: "traditional" as const, status: "active" as const },
+    { title: "Prova de Matematica -- 9º Ano", subjectId: subjectIds[0], type: "traditional" as const, status: "active" as const },
     { title: "Simulado ENEM -- Linguagens", subjectId: subjectIds[1], type: "simulado" as const, status: "scheduled" as const },
     { title: "Atividade de Ciencias", subjectId: subjectIds[4], type: "homework" as const, status: "active" as const },
   ];
