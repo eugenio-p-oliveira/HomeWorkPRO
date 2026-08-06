@@ -1,3 +1,4 @@
 - [SQLite legado](sqlite-legacy.md) — datas migradas podem conter valores literais de defaults antigos; o conversor deve normalizar esses registros sem derrubar respostas.
 - [Tokens assinados](signed-tokens.md) — tokens de sessão precisam ser HMAC-assinados com o segredo do ambiente e validados em tempo constante.
 - [Variáveis Vite no deploy](vite-env.md) — valores não configurados podem chegar como a string literal `"undefined"`; normalize antes de montar URLs.
+- [Sincronização Vercel](vercel-sync.md) — se o bundle público não muda após push no `main`, verificar repositório/branch do projeto Vercel antes de investigar o código.
