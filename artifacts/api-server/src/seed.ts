@@ -3,6 +3,7 @@ import {
   usersTable, tenantsTable,
   subjectsTable, seriesTable, classesTable, classStudentsTable,
   examsTable, questionsTable, questionOptionsTable,
+  guardiansTable, studentGuardiansTable,
 } from "@workspace/db";
 import { eq, sql } from "@workspace/db";
 import { hashPassword } from "./lib/auth";
@@ -173,22 +174,56 @@ async function seedExams(subjectIds: number[], teacherIds: number[], classId: nu
   }
 }
 
+async function ensureDemoGuardian() {
+  const [existingGuardian] = await db
+    .select()
+    .from(guardiansTable)
+    .where(eq(guardiansTable.email, "maria.alves@teste.com"));
+
+  if (existingGuardian) return;
+
+  const [student] = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(sql`tenant_id = ${TENANT_ID} AND role = 'student'`)
+    .limit(1);
+
+  if (!student) return;
+
+  const [guardian] = await db
+    .insert(guardiansTable)
+    .values({
+      tenantId: TENANT_ID,
+      name: "Maria Alves",
+      email: "maria.alves@teste.com",
+      phone: "(11) 98765-1234",
+      passwordHash: await hashPassword("senha123"),
+    })
+    .returning();
+
+  await db.insert(studentGuardiansTable).values({
+    studentId: student.id,
+    guardianId: guardian.id,
+    relation: "parent",
+  });
+}
+
 export async function autoSeedIfEmpty() {
   const [anyTenant] = await db.select({ id: tenantsTable.id }).from(tenantsTable).limit(1);
-  if (anyTenant) {
-    return false;
+  if (!anyTenant) {
+    console.log("[auto-seed] Database empty -- seeding demo data...");
+
+    await ensureTenant();
+    const teacherIds = await seedTeachers();
+    const studentIds = await seedStudents();
+    const subjectIds = await seedSubjects();
+    const { classAId } = await seedSeriesAndClasses(teacherIds);
+    await enrollStudents(classAId, studentIds);
+    await seedExams(subjectIds, teacherIds, classAId);
+
+    console.log("[auto-seed] Demo data seeded successfully");
   }
 
-  console.log("[auto-seed] Database empty -- seeding demo data...");
-
-  await ensureTenant();
-  const teacherIds = await seedTeachers();
-  const studentIds = await seedStudents();
-  const subjectIds = await seedSubjects();
-  const { classAId } = await seedSeriesAndClasses(teacherIds);
-  await enrollStudents(classAId, studentIds);
-  await seedExams(subjectIds, teacherIds, classAId);
-
-  console.log("[auto-seed] Demo data seeded successfully");
-  return true;
+  await ensureDemoGuardian();
+  return !anyTenant;
 }
