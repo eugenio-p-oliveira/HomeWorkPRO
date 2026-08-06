@@ -1,0 +1,11 @@
+{
+  "buildCommand": "pnpm --filter @workspace/escola-saas run build",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "outputDirectory": "artifacts/escola-saas/dist",
+  "rewrites": [
+    {
+      "source": "/((?!assets/|favicon\\.svg$).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
