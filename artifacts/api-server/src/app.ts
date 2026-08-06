@@ -67,16 +67,27 @@ app.use(
   }),
 );
 
+const defaultProductionOrigins = [
+  "https://homeworkproapp.vercel.app",
+  "https://www.homeworkproapp.vercel.app",
+];
+
 const configuredOrigins = [
+  ...defaultProductionOrigins,
   process.env.FRONTEND_URL,
   ...(process.env.CORS_ORIGINS ?? "").split(","),
-].map((origin) => origin?.trim()).filter((origin): origin is string => Boolean(origin));
+]
+  .map((origin) => origin?.trim().replace(/\/$/, ""))
+  .filter((origin): origin is string => Boolean(origin));
 
 app.use(cors({
+  methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204,
   origin: process.env.NODE_ENV !== "production"
     ? true
     : (origin, callback) => {
-        if (!origin || configuredOrigins.length === 0 || configuredOrigins.includes(origin)) {
+        if (!origin || configuredOrigins.includes(origin.replace(/\/$/, ""))) {
           callback(null, true);
         } else {
           callback(new Error("CORS origin not allowed"));

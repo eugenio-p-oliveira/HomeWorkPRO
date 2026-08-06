@@ -1,0 +1,33 @@
+demo:1 Access to fetch at 'https://educacao-omni--aesirsoftwareho.replit.app/api/guardians/login' from origin 'https://homeworkproapp.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+educacao-omni--aesirsoftwareho.replit.app/api/guardians/login:1  Failed to load resource: net::ERR_FAILED
+demo:1 Access to fetch at 'https://educacao-omni--aesirsoftwareho.replit.app/api/guardians/login' from origin 'https://homeworkproapp.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+index-AhAdRsSi.js:70  POST https://educacao-omni--aesirsoftwareho.replit.app/api/guardians/login net::ERR_FAILED
+c @ index-AhAdRsSi.js:70
+onClick @ index-AhAdRsSi.js:70
+KE @ index-AhAdRsSi.js:9
+(anônimo) @ index-AhAdRsSi.js:9
+eO @ index-AhAdRsSi.js:9
+Av @ index-AhAdRsSi.js:9
+Iv @ index-AhAdRsSi.js:10
+rI @ index-AhAdRsSi.js:10
+demo:1 Access to fetch at 'https://educacao-omni--aesirsoftwareho.replit.app/api/auth/login' from origin 'https://homeworkproapp.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+index-AhAdRsSi.js:10  POST https://educacao-omni--aesirsoftwareho.replit.app/api/auth/login net::ERR_FAILED
+Me @ index-AhAdRsSi.js:10
+await in Me
+dU @ index-AhAdRsSi.js:10
+mutationFn @ index-AhAdRsSi.js:10
+fn @ index-AhAdRsSi.js:10
+O @ index-AhAdRsSi.js:10
+start @ index-AhAdRsSi.js:10
+execute @ index-AhAdRsSi.js:10
+await in execute
+mutate @ index-AhAdRsSi.js:10
+(anônimo) @ index-AhAdRsSi.js:10
+c @ index-AhAdRsSi.js:70
+onClick @ index-AhAdRsSi.js:70
+KE @ index-AhAdRsSi.js:9
+(anônimo) @ index-AhAdRsSi.js:9
+eO @ index-AhAdRsSi.js:9
+Av @ index-AhAdRsSi.js:9
+Iv @ index-AhAdRsSi.js:10
+rI @ index-AhAdRsSi.js:10
