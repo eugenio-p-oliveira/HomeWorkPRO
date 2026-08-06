@@ -1,8 +1,9 @@
 # Relatório de Prontidão para Produção — EduSaaS
 
-**Data:** 2026-07-07
-**URL de Produção:** https://educacao-omni--aesirsoftwareho.replit.app
-**Status Geral:** Funcional em desenvolvimento. Produção requer seed de dados e hardening adicional.
+**Data:** 2026-08-06
+**URL da API:** https://home-work-pro--aesirsoftwareho.replit.app
+**Banco de produção:** SQLite versionado em `artifacts/api-server/edusaas.db`
+**Status Geral:** API funcional com SQLite; a publicação do artefato precisa ser atualizada para aplicar a configuração mais recente.
 
 ---
 
@@ -11,29 +12,35 @@
 | Funcionalidade | Dev | Produção | Observação |
 |---|---|---|---|
 | Landing page | OK | OK | Renderiza corretamente |
-| Login staff (admin/prof) | OK | **Falha** | Banco de produção vazio — sem dados demo |
-| Login aluno | OK | **Falha** | Banco de produção vazio |
-| Login responsável | OK | **Falha** | Banco de produção vazio |
+| Login staff (admin/prof) | OK | OK | Dados demo disponíveis no SQLite |
+| Login aluno | OK | OK | Dados demo disponíveis no SQLite |
+| Login responsável | OK | OK | Dados demo disponíveis no SQLite |
 | Registro de instituição | OK | N/A | Schema de plano inconsistente |
 | Dashboard admin | OK | N/A | Requer dados |
 | Criação de provas | OK | N/A | Requer dados |
 | Portal do responsável | OK | N/A | Requer dados |
 | Timer de provas (aluno) | OK | N/A | Requer dados |
 | Relatórios pedagógicos | OK | N/A | Requer dados |
-| Demo page (/demo) | OK | **Falha** | Auto-login falha (401) |
+| Demo page (/demo) | OK | Pendente de redeploy do frontend | O deployment Vercel antigo ainda serve bundle e rotas antigas |
 | Página de planos | 404 | 404 | Corrigido: redireciona para /#planos |
 
-### Ação Imediata para Produção
+### Configuração de produção
 
-O banco de dados PostgreSQL de produção está vazio (sem tenants, users, provas, etc.). O deploy do código funciona, mas não há dados para autenticar. **É necessário executar o seed no banco de produção.**
+A API não usa Supabase nem PostgreSQL. O ambiente de execução define:
 
-Comandos sugeridos (via Secrets/Environment do Replit):
-```bash
-# No ambiente de produção (não disponível via agent):
-pnpm --filter @workspace/db run push  # schema
-pnpm --filter @workspace/scripts run seed  # dados demo
-pnpm --filter @workspace/scripts exec tsx ./src/seed_parents.ts  # responsáveis
+```text
+EDUSAAS_SQLITE_PATH=artifacts/api-server/edusaas.db
 ```
+
+O schema é inicializado de forma idempotente no startup e o arquivo foi validado com
+`integrity_check = ok`. O arquivo contém tenants, usuários, responsáveis, disciplinas,
+turmas e provas de demonstração.
+
+**Limitação operacional:** o deployment Autoscale não oferece filesystem persistente.
+Alterações feitas diretamente no SQLite durante a execução podem ser perdidas após
+reinício ou nova publicação. Para preservar alterações de produção entre deploys,
+o armazenamento deve migrar para um banco persistente; esta troca mantém o SQLite
+solicitado como banco empacotado da publicação atual.
 
 ---
 
@@ -88,7 +95,7 @@ Scanner identificou 21 vulnerabilidades (8 alta, 11 moderada, 2 baixa). **A maio
 | `yoctocolors` | Moderada | Prototype pollution (dev-only) | Low priority |
 | `esbuild` | Moderada | Path traversal (build-time) | Low priority |
 
-**Runtime (produção):** `express`, `cors`, `drizzle-orm`, `pg` — sem vulnerabilidades críticas.
+**Runtime (produção):** `express`, `cors`, `drizzle-orm`, `better-sqlite3` — sem vulnerabilidades críticas.
 
 ---
 
@@ -101,7 +108,7 @@ Scanner identificou 21 vulnerabilidades (8 alta, 11 moderada, 2 baixa). **A maio
 | 3 | **`/plans` retorna 404** | ✅ Corrigido: redireciona para `/#planos` |
 | 4 | **Schema de plano inconsistente** | ⚠️ Aberto: API aceita `free`/`basic`/`premium`; landing mostra `Inicial`/`Intermediário`/`Robusto` |
 | 5 | **Guardian auth com Buffer.from()** | ✅ Corrigido: usado `atob()` para compatibilidade browser |
-| 6 | **Produção sem dados de demo** | ⚠️ Aberto: Requer seed no DB de produção |
+| 6 | **Persistência do SQLite em Autoscale** | ⚠️ Limitação da plataforma: o arquivo empacotado é restaurado em novas publicações/reinícios |
 
 ---
 
@@ -112,7 +119,7 @@ Scanner identificou 21 vulnerabilidades (8 alta, 11 moderada, 2 baixa). **A maio
 - [x] RBAC no backend
 - [x] CORS hardening
 - [x] HTTPS em produção
-- [ ] **Seed de dados de demo em produção** (BLOQUEANTE)
+- [x] **SQLite de produção com dados demo**
 - [ ] Rate limiting no Express (BLOQUEANTE)
 - [ ] Helmet/CSP headers (BLOQUEANTE)
 - [ ] Senhas com bcrypt (BLOQUEANTE)
@@ -128,9 +135,9 @@ Scanner identificou 21 vulnerabilidades (8 alta, 11 moderada, 2 baixa). **A maio
 ## 7. Recomendações Imediatas
 
 ### Prioridade 1 (Bloqueante para Go-Live)
-1. **Popular DB de produção** com seed script ou adicionar auto-seed no startup
-2. **Adicionar `helmet()` e `express-rate-limit`** ao Express
-3. **Migrar hash de senha** de SHA-256 para bcrypt
+1. **Publicar novamente o artefato da API** para aplicar `EDUSAAS_SQLITE_PATH`
+2. **Atualizar o projeto Vercel** para acompanhar o `main` e publicar o frontend corrigido
+3. **Migrar o SQLite para armazenamento persistente** se dados editados em produção precisarem sobreviver a reinícios
 4. **Mover JWT para cookies HttpOnly**
 
 ### Prioridade 2 (Semana 1 pós-launch)

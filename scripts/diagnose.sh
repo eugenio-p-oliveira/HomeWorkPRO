@@ -58,28 +58,21 @@ else
   cat > .env << 'EOF'
 PORT=3000
 NODE_ENV=development
-DATABASE_URL=postgresql://postgres:password@helium/heliumdb?sslmode=disable
+EDUSAAS_SQLITE_PATH=./artifacts/api-server/edusaas.db
 LOG_LEVEL=info
 EOF
   echo -e "${GREEN}✅ Arquivo .env criado${NC}"
 fi
 
-# 4. PostgreSQL
+# 4. SQLite
 echo ""
-echo "4️⃣ Verificando PostgreSQL..."
-if command -v psql &> /dev/null; then
-  PSQL_VERSION=$(psql --version)
-  echo -e "${GREEN}✅ psql instalado: $PSQL_VERSION${NC}"
-  
-  # Testar conexão
-  if psql "$DATABASE_URL" -c "SELECT 1;" > /dev/null 2>&1; then
-    echo -e "${GREEN}✅ Conexão com banco bem-sucedida${NC}"
-  else
-    echo -e "${YELLOW}⚠️ Não foi possível conectar ao banco${NC}"
-    echo "   DATABASE_URL: $DATABASE_URL"
-  fi
+echo "4️⃣ Verificando SQLite..."
+SQLITE_PATH="${EDUSAAS_SQLITE_PATH:-./artifacts/api-server/edusaas.db}"
+if [ -f "$SQLITE_PATH" ]; then
+  echo -e "${GREEN}✅ SQLite encontrado: $SQLITE_PATH${NC}"
 else
-  echo -e "${YELLOW}⚠️ psql não instalado (opcional)${NC}"
+  echo -e "${RED}❌ SQLite não encontrado: $SQLITE_PATH${NC}"
+  exit 1
 fi
 
 # 5. Dependências instaladas

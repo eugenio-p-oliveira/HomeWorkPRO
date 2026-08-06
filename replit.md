@@ -10,14 +10,14 @@ Plataforma SaaS completa para gestão escolar: criação de provas com correçã
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string, `SESSION_SECRET` — JWT signing secret
+- Required env: `EDUSAAS_SQLITE_PATH` — path to the EduSaaS SQLite file (production sets this explicitly), `SESSION_SECRET` — JWT signing secret
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
 - Frontend: React 19 + Vite 7, Wouter (routing), TanStack Query, Tailwind CSS v4, Recharts, Sonner
 - API: Express 5, pino logging
-- DB: PostgreSQL + Drizzle ORM
+- DB: SQLite + Drizzle ORM (`better-sqlite3`)
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec in `lib/api-spec/openapi.yaml`)
 - Build: esbuild (CJS bundle)
@@ -62,7 +62,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 - Never call service ports directly (e.g. port 8080) — always go through the proxy at `localhost:80`.
 - `getListClassesQueryKey` requires params argument (can be empty object `{}`).
 - The `useLogout` hook is a mutation (POST /api/auth/logout) — handle its `onSettled` to call `logout()` from AuthContext.
-- **drizzle-orm `inArray` with node-postgres**: `inArray(col, ids)` generates `col IN ($1, $2)` which works correctly. Do NOT use `sql\`col = ANY(${ids})\`` — it generates `= ANY(($1,$2))` (ROW constructor) which PostgreSQL rejects. Always use `inArray` from `drizzle-orm`.
+- **SQLite production file**: the API must use `artifacts/api-server/edusaas.db` in production; do not introduce a PostgreSQL or Supabase connection without an explicit architecture change.
 - **`classStudentsTable.studentId`** had a wrong FK referencing `tenantsTable` instead of `usersTable` — was fixed in `lib/db/src/schema/academic.ts` and migrated with `push-force`.
 - **Radix UI `<SelectItem>`**: `value=""` (empty string) is forbidden — use a sentinel like `"_none"` and convert back in `onValueChange`.
 - **Wouter `<Link>`**: renders as `<a>`, do NOT nest another `<a>` inside. Pass `className` directly to `<Link>`.
