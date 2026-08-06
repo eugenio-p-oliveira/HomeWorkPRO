@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, questionsTable, questionOptionsTable, examsTable } from "@workspace/db";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 
 const router = Router({ mergeParams: true });
@@ -39,7 +39,7 @@ router.post("/", async (req, res) => {
   const { type, statement, explanation, topicId, points, order, options } = req.body;
   const [q] = await db.insert(questionsTable).values({
     examId, type, statement, explanation, topicId,
-    points: String(points ?? 1), order,
+    points: Number(points ?? 1), order,
   }).returning();
   let createdOptions: any[] = [];
   if (options?.length > 0) {

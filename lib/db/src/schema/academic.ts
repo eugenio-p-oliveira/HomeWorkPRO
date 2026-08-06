@@ -1,59 +1,60 @@
-import { pgTable, serial, text, integer, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { tenantsTable } from "./tenants";
 import { usersTable } from "./users";
+import { sqliteTimestamp } from "./sqlite";
 
-export const educationalLevelEnum = pgEnum("educational_level", [
+export const educationalLevelEnum = [
   "infantil",
   "fundamental",
   "medio",
   "tecnico",
   "superior",
-]);
+] as const;
 
-export const shiftEnum = pgEnum("shift", ["manha", "tarde", "noite", "integral"]);
+export const shiftEnum = ["manha", "tarde", "noite", "integral"] as const;
 
-export const subjectsTable = pgTable("subjects", {
-  id: serial("id").primaryKey(),
+export const subjectsTable = sqliteTable("subjects", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   tenantId: integer("tenant_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   color: text("color"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: sqliteTimestamp("created_at").notNull().default(new Date()),
 });
 
-export const topicsTable = pgTable("topics", {
-  id: serial("id").primaryKey(),
+export const topicsTable = sqliteTable("topics", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   subjectId: integer("subject_id").notNull().references(() => subjectsTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: sqliteTimestamp("created_at").notNull().default(new Date()),
 });
 
-export const seriesTable = pgTable("series", {
-  id: serial("id").primaryKey(),
+export const seriesTable = sqliteTable("series", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   tenantId: integer("tenant_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
-  educationalLevel: educationalLevelEnum("educational_level").notNull(),
+  educationalLevel: text("educational_level", { enum: educationalLevelEnum }).notNull(),
   order: integer("order").notNull().default(0),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: sqliteTimestamp("created_at").notNull().default(new Date()),
 });
 
-export const classesTable = pgTable("classes", {
-  id: serial("id").primaryKey(),
+export const classesTable = sqliteTable("classes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   tenantId: integer("tenant_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
   serieId: integer("serie_id").notNull().references(() => seriesTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
-  shift: shiftEnum("shift").notNull(),
+  shift: text("shift", { enum: shiftEnum }).notNull(),
   year: integer("year").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: sqliteTimestamp("created_at").notNull().default(new Date()),
 });
 
-export const classStudentsTable = pgTable("class_students", {
-  id: serial("id").primaryKey(),
+export const classStudentsTable = sqliteTable("class_students", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   classId: integer("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
   studentId: integer("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
-  enrolledAt: timestamp("enrolled_at").notNull().defaultNow(),
+  enrolledAt: sqliteTimestamp("enrolled_at").notNull().default(new Date()),
 });
 
 export const insertSubjectSchema = createInsertSchema(subjectsTable).omit({ id: true, createdAt: true });

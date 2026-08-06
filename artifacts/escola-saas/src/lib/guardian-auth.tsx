@@ -18,6 +18,18 @@ interface GuardianAuthContextType {
 
 const GuardianAuthContext = createContext<GuardianAuthContextType | undefined>(undefined);
 
+function decodeTokenPayload(token: string): { guardianId?: number; tenantId?: number; exp?: number } | null {
+  try {
+    const [encodedPayload] = token.split(".");
+    if (!encodedPayload) return null;
+    const normalized = encodedPayload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    return JSON.parse(atob(padded));
+  } catch {
+    return null;
+  }
+}
+
 export function GuardianAuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(localStorage.getItem("edusaas_guardian_token"));
   const [guardian, setGuardian] = useState<Guardian | null>(null);
@@ -25,17 +37,25 @@ export function GuardianAuthProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     if (token) {
-      try {
-        const payload = JSON.parse(atob(token));
-        if (payload.guardianId && payload.exp > Date.now()) {
-          setGuardian({ id: payload.guardianId, tenantId: payload.tenantId, name: payload.name ?? "", email: payload.email ?? "" });
-        } else {
-          localStorage.removeItem("edusaas_guardian_token");
-          setToken(null);
-        }
-      } catch {
+      const payload = decodeTokenPayload(token);
+      if (payload?.guardianId && payload.exp && payload.exp > Date.now()) {
+        fetch("/api/guardians/me", { headers: { Authorization: `Bearer ${token}` } })
+          .then(async (res) => {
+            if (!res.ok) throw new Error("Invalid guardian session");
+            return res.json();
+          })
+          .then((currentGuardian) => setGuardian(currentGuardian))
+          .catch(() => {
+            localStorage.removeItem("edusaas_guardian_token");
+            setToken(null);
+            setGuardian(null);
+          })
+          .finally(() => setIsLoading(false));
+        return;
+      } else {
         localStorage.removeItem("edusaas_guardian_token");
         setToken(null);
+        setGuardian(null);
       }
     }
     setIsLoading(false);

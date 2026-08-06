@@ -4,7 +4,7 @@ import {
   classesTable, classStudentsTable, studentAnswersTable, questionsTable, questionOptionsTable,
   seriesTable, topicsTable
 } from "@workspace/db";
-import { eq, sql, and, inArray } from "drizzle-orm";
+import { eq, sql, and, inArray } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();

@@ -1,5 +1,5 @@
-import { db, pool, usersTable, guardiansTable, studentGuardiansTable, parentMessagesTable, schoolEventsTable, parentTipsTable, subjectsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { db, usersTable, guardiansTable, studentGuardiansTable, parentMessagesTable, schoolEventsTable, parentTipsTable, subjectsTable } from "@workspace/db";
+import { eq, sql } from "@workspace/db";
 import crypto from "crypto";
 
 const TENANT_ID = 1;
@@ -182,7 +182,6 @@ async function main() {
   }
 
   console.log("\n✅ Seed de responsáveis concluído!");
-  await pool.end();
 }
 
 main().catch(e => { console.error("❌ Erro:", e); process.exit(1); });

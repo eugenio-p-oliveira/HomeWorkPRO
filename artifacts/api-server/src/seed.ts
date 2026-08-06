@@ -4,7 +4,7 @@ import {
   subjectsTable, seriesTable, classesTable, classStudentsTable,
   examsTable, questionsTable, questionOptionsTable,
 } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql } from "@workspace/db";
 import { hashPassword } from "./lib/auth";
 
 const TENANT_ID = 1;
@@ -159,7 +159,7 @@ async function seedExams(subjectIds: number[], teacherIds: number[], classId: nu
         examId: exam.id,
         type: "multiple_choice",
         statement: `Questao ${q + 1} da ${tmpl.title}`,
-        points: "2",
+        points: 2,
         order: q,
       }).returning();
 

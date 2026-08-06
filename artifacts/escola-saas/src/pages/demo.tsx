@@ -15,7 +15,13 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 
-const API_URL = import.meta.env.VITE_API_URL;
+// The API is normally proxied under the same origin. Keep support for a
+// separately configured API URL, but never build an "undefined/..." URL.
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_URL =
+  configuredApiUrl && configuredApiUrl !== "undefined" && configuredApiUrl !== "null"
+    ? configuredApiUrl.replace(/\/$/, "")
+    : "";
 
 const DEMOS = [
   {

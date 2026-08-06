@@ -3,7 +3,7 @@ import {
   db, examsTable, questionsTable, questionOptionsTable, examSessionsTable, studentAnswersTable,
   usersTable, subjectsTable, classesTable
 } from "@workspace/db";
-import { eq, and, sql, count, avg, inArray } from "drizzle-orm";
+import { eq, and, sql, count, avg, inArray } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 import { activityLogTable } from "@workspace/db";
 

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, questionsTable, questionOptionsTable, examsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();
@@ -10,7 +10,7 @@ router.put("/:questionId", async (req, res) => {
   const tenant = (req as any).tenant;
   const id = parseInt(req.params.questionId);
   const { type, statement, explanation, topicId, points, order, options } = req.body;
-  const [q] = await db.update(questionsTable).set({ type, statement, explanation, topicId, points: String(points ?? 1), order })
+  const [q] = await db.update(questionsTable).set({ type, statement, explanation, topicId, points: Number(points ?? 1), order })
     .where(eq(questionsTable.id, id)).returning();
   if (!q) { res.status(404).json({ error: "Not found" }); return; }
   // Verify question belongs to a tenant-owned exam

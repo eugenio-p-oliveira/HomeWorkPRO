@@ -2,9 +2,26 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { Request, Response, NextFunction } from "express";
 import { db, usersTable, tenantsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and } from "@workspace/db";
 
 const SALT_ROUNDS = 12;
+const TOKEN_SECRET = process.env.SESSION_SECRET;
+
+function getTokenSecret(): string {
+  if (!TOKEN_SECRET) {
+    throw new Error("SESSION_SECRET is required for token signing");
+  }
+  return TOKEN_SECRET;
+}
+
+function signTokenPayload(payload: Record<string, unknown>): string {
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = crypto
+    .createHmac("sha256", getTokenSecret())
+    .update(encodedPayload)
+    .digest("base64url");
+  return `${encodedPayload}.${signature}`;
+}
 
 export async function hashPassword(password: string): Promise<string> {
   const normalized = password.trim();
@@ -25,13 +42,25 @@ export async function verifyPasswordLegacy(password: string, hash: string): Prom
 }
 
 export function generateToken(userId: number, tenantId: number): string {
-  const payload = JSON.stringify({ userId, tenantId, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 });
-  return Buffer.from(payload).toString("base64");
+  return signTokenPayload({ userId, tenantId, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 });
+}
+
+export function generateGuardianToken(guardianId: number, tenantId: number): string {
+  return signTokenPayload({ guardianId, tenantId, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 });
 }
 
 export function verifyToken(token: string): { userId: number; tenantId: number; guardianId?: number } | null {
   try {
-    const payload = JSON.parse(Buffer.from(token, "base64").toString("utf8"));
+    const [encodedPayload, providedSignature] = token.split(".");
+    if (!encodedPayload || !providedSignature) return null;
+    const expectedSignature = crypto
+      .createHmac("sha256", getTokenSecret())
+      .update(encodedPayload)
+      .digest("base64url");
+    const expected = Buffer.from(expectedSignature);
+    const provided = Buffer.from(providedSignature);
+    if (expected.length !== provided.length || !crypto.timingSafeEqual(expected, provided)) return null;
+    const payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8"));
     if (payload.exp < Date.now()) return null;
     return { userId: payload.userId, tenantId: payload.tenantId, guardianId: payload.guardianId };
   } catch {

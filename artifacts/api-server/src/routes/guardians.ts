@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, guardiansTable, studentGuardiansTable, usersTable, parentMessagesTable, schoolEventsTable, parentTipsTable, examSessionsTable, examsTable, subjectsTable, tenantsTable } from "@workspace/db";
-import { eq, and, desc, inArray, sql } from "drizzle-orm";
-import { hashPassword, verifyPasswordLegacy, generateToken, verifyToken, requireAuth } from "../lib/auth";
+import { eq, and, desc, inArray, sql, count } from "@workspace/db";
+import { hashPassword, verifyPasswordLegacy, generateGuardianToken, verifyToken, requireAuth } from "../lib/auth";
 
 const router = Router();
 
@@ -28,10 +28,8 @@ router.post("/guardians/login", async (req, res) => {
   if (!guardian || !(await verifyPasswordLegacy(password, guardian.passwordHash))) {
     res.status(401).json({ error: "Invalid credentials" }); return;
   }
-  const token = generateToken(guardian.id, guardian.tenantId); // override below
-  const payload = JSON.stringify({ guardianId: guardian.id, tenantId: guardian.tenantId, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 });
-  const customToken = Buffer.from(payload).toString("base64");
-  res.json({ token: customToken, guardian: { id: guardian.id, name: guardian.name, email: guardian.email, tenantId: guardian.tenantId } });
+  const token = generateGuardianToken(guardian.id, guardian.tenantId);
+  res.json({ token, guardian: { id: guardian.id, name: guardian.name, email: guardian.email, tenantId: guardian.tenantId } });
 });
 
 // GUARDIAN ME
@@ -145,14 +143,18 @@ router.get("/guardians/:id/stats", requireGuardianAuth, async (req, res) => {
 
   // upcoming exams
   const upcomingExams = await db.select().from(examsTable)
-    .where(and(eq(examsTable.tenantId, tenantId), eq(examsTable.status, "active"), sql`starts_at >= NOW() OR class_id IS NULL`))
+    .where(and(
+      eq(examsTable.tenantId, tenantId),
+      eq(examsTable.status, "active"),
+      sql`(${examsTable.startsAt} >= ${new Date().toISOString()} OR ${examsTable.classId} IS NULL)`,
+    ))
     .orderBy(examsTable.startsAt);
   const upcoming = upcomingExams.slice(0, 5).map(e => ({
     id: e.id, title: e.title, type: e.type, startsAt: e.startsAt?.toISOString() ?? null, subjectId: e.subjectId, classId: e.classId,
   }));
 
   // messages unread
-  const unreadCount = await db.select({ cnt: sql`count(*)::int` }).from(parentMessagesTable)
+  const unreadCount = await db.select({ cnt: count() }).from(parentMessagesTable)
     .where(and(eq(parentMessagesTable.guardianId, guardianId), eq(parentMessagesTable.isRead, false)));
 
   res.json({

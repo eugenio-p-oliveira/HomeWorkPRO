@@ -11,4 +11,6 @@ export const db = drizzle(sqlite, { schema });
 
 export * from "./schema";
 export { guardiansTable, studentGuardiansTable, parentMessagesTable, schoolEventsTable, parentTipsTable } from "./schema";
-export { eq, and, or, sql, inArray, desc, count, gt, gte, lt, lte } from "drizzle-orm";
+export {
+  eq, and, or, sql, inArray, desc, asc, count, avg, gt, gte, lt, lte, ilike,
+} from "drizzle-orm";

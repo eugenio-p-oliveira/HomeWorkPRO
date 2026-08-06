@@ -3,7 +3,7 @@ import {
   db, subjectsTable, topicsTable, seriesTable, classesTable, classStudentsTable, usersTable,
   examSessionsTable, examsTable, studentAnswersTable, questionsTable
 } from "@workspace/db";
-import { eq, and, count, avg, sql, inArray } from "drizzle-orm";
+import { eq, and, count, avg, sql, inArray } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();

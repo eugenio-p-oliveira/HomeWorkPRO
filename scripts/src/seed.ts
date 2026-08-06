@@ -1,11 +1,11 @@
 import {
-  db, pool,
+  db,
   usersTable, tenantsTable,
   subjectsTable, topicsTable, seriesTable, classesTable, classStudentsTable,
   examsTable, questionsTable, questionOptionsTable,
   examSessionsTable, studentAnswersTable, activityLogTable,
 } from "@workspace/db";
-import { eq, sql, inArray } from "drizzle-orm";
+import { eq, sql, inArray } from "@workspace/db";
 import crypto from "crypto";
 
 const TENANT_ID = 1;
@@ -433,7 +433,7 @@ async function main() {
       const [q] = await db.insert(questionsTable).values({
         examId: exam.id, type: "multiple_choice",
         statement: qd.statement, explanation: qd.explanation,
-        topicId, points: "1", order: qi,
+        topicId, points: 1, order: qi,
       }).returning();
       await db.insert(questionOptionsTable).values(
         qd.options.map(o => ({ questionId: q.id, text: o.text, letter: o.letter, isCorrect: o.isCorrect }))
@@ -490,7 +490,7 @@ async function main() {
       const [session] = await db.insert(examSessionsTable).values({
         examId: examInfo.id, studentId,
         status: "submitted", startedAt, submittedAt,
-        score: "0", maxScore: String(maxScore),
+        score: 0, maxScore,
       }).returning();
 
       let correct = 0;
@@ -508,7 +508,7 @@ async function main() {
         }
       }
       await db.update(examSessionsTable)
-        .set({ score: String(correct), maxScore: String(maxScore) })
+        .set({ score: correct, maxScore })
         .where(eq(examSessionsTable.id, session.id));
     }
     console.log(`  ✓ ${students.length} sessões → Prova #${examInfo.id}`);
@@ -583,7 +583,6 @@ async function main() {
   console.log(`  Sessões simuladas: ~${closedExams.length * 20}`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-  await pool.end();
 }
 
 main().catch(e => { console.error("❌ Erro:", e); process.exit(1); });

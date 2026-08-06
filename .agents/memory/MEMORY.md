@@ -1,0 +1,3 @@
+- [SQLite legado](sqlite-legacy.md) — datas migradas podem conter valores literais de defaults antigos; o conversor deve normalizar esses registros sem derrubar respostas.
+- [Tokens assinados](signed-tokens.md) — tokens de sessão precisam ser HMAC-assinados com o segredo do ambiente e validados em tempo constante.
+- [Variáveis Vite no deploy](vite-env.md) — valores não configurados podem chegar como a string literal `"undefined"`; normalize antes de montar URLs.

@@ -7,6 +7,9 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
+// The app runs behind Replit/Vercel's reverse proxy. This makes the
+// rate-limit client IP and forwarded headers work consistently in production.
+app.set("trust proxy", 1);
 
 // Security headers
 app.use(helmet({
@@ -64,7 +67,22 @@ app.use(
   }),
 );
 
-app.use(cors({ origin: process.env.NODE_ENV === "production" ? false : true }));
+const configuredOrigins = [
+  process.env.FRONTEND_URL,
+  ...(process.env.CORS_ORIGINS ?? "").split(","),
+].map((origin) => origin?.trim()).filter((origin): origin is string => Boolean(origin));
+
+app.use(cors({
+  origin: process.env.NODE_ENV !== "production"
+    ? true
+    : (origin, callback) => {
+        if (!origin || configuredOrigins.length === 0 || configuredOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("CORS origin not allowed"));
+        }
+      },
+}));
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 

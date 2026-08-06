@@ -1,67 +1,68 @@
-import { pgTable, serial, text, integer, timestamp, boolean, pgEnum } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { tenantsTable } from "./tenants";
 import { usersTable } from "./users";
 import { subjectsTable } from "./academic";
+import { sqliteTimestamp } from "./sqlite";
 
-export const guardianRoleEnum = pgEnum("guardian_relation", ["parent", "stepparent", "grandparent", "guardian", "other"]);
+export const guardianRoleEnum = ["parent", "stepparent", "grandparent", "guardian", "other"] as const;
 
-export const guardiansTable = pgTable("guardians", {
-  id: serial("id").primaryKey(),
+export const guardiansTable = sqliteTable("guardians", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   tenantId: integer("tenant_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   email: text("email").notNull(),
   phone: text("phone"),
   passwordHash: text("password_hash").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: sqliteTimestamp("created_at").notNull().default(new Date()),
+  updatedAt: sqliteTimestamp("updated_at").notNull().default(new Date()),
 });
 
-export const studentGuardiansTable = pgTable("student_guardians", {
-  id: serial("id").primaryKey(),
+export const studentGuardiansTable = sqliteTable("student_guardians", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   studentId: integer("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   guardianId: integer("guardian_id").notNull().references(() => guardiansTable.id, { onDelete: "cascade" }),
-  relation: guardianRoleEnum("relation").notNull().default("parent"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  relation: text("relation", { enum: guardianRoleEnum }).notNull().default("parent"),
+  createdAt: sqliteTimestamp("created_at").notNull().default(new Date()),
 });
 
-export const messageTypeEnum = pgEnum("message_type", ["exam_alert", "exam_result", "activity_reminder", "general_tip", "custom_message"]);
+export const messageTypeEnum = ["exam_alert", "exam_result", "activity_reminder", "general_tip", "custom_message"] as const;
 
-export const parentMessagesTable = pgTable("parent_messages", {
-  id: serial("id").primaryKey(),
+export const parentMessagesTable = sqliteTable("parent_messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   tenantId: integer("tenant_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
   guardianId: integer("guardian_id").notNull().references(() => guardiansTable.id, { onDelete: "cascade" }),
   studentId: integer("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   senderId: integer("sender_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
-  type: messageTypeEnum("type").notNull().default("custom_message"),
+  type: text("type", { enum: messageTypeEnum }).notNull().default("custom_message"),
   title: text("title").notNull(),
   body: text("body").notNull(),
-  isRead: boolean("is_read").notNull().default(false),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  isRead: integer("is_read", { mode: "boolean" }).notNull().default(false),
+  createdAt: sqliteTimestamp("created_at").notNull().default(new Date()),
 });
 
-export const eventTypeEnum = pgEnum("event_type", ["exam", "holiday", "parent_meeting", "cultural", "sports", "deadline", "other"]);
+export const eventTypeEnum = ["exam", "holiday", "parent_meeting", "cultural", "sports", "deadline", "other"] as const;
 
-export const schoolEventsTable = pgTable("school_events", {
-  id: serial("id").primaryKey(),
+export const schoolEventsTable = sqliteTable("school_events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   tenantId: integer("tenant_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   description: text("description"),
-  eventType: eventTypeEnum("event_type").notNull().default("other"),
-  startsAt: timestamp("starts_at").notNull(),
-  endsAt: timestamp("ends_at"),
-  isAllDay: boolean("is_all_day").notNull().default(false),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  eventType: text("event_type", { enum: eventTypeEnum }).notNull().default("other"),
+  startsAt: sqliteTimestamp("starts_at").notNull(),
+  endsAt: sqliteTimestamp("ends_at"),
+  isAllDay: integer("is_all_day", { mode: "boolean" }).notNull().default(false),
+  createdAt: sqliteTimestamp("created_at").notNull().default(new Date()),
 });
 
-export const parentTipsTable = pgTable("parent_tips", {
-  id: serial("id").primaryKey(),
+export const parentTipsTable = sqliteTable("parent_tips", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   tenantId: integer("tenant_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
   subjectId: integer("subject_id").references(() => subjectsTable.id, { onDelete: "set null" }),
   title: text("title").notNull(),
   content: text("content").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: sqliteTimestamp("created_at").notNull().default(new Date()),
 });
 
 export const insertGuardianSchema = createInsertSchema(guardiansTable).omit({ id: true, createdAt: true, updatedAt: true });

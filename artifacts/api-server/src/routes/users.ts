@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, examSessionsTable, examsTable, subjectsTable, questionsTable, studentAnswersTable } from "@workspace/db";
-import { eq, and, sql, ilike, avg, count, inArray } from "drizzle-orm";
+import { eq, and, sql, ilike, avg, count, inArray } from "@workspace/db";
 import { requireAuth, requireRole } from "../lib/auth";
 import { hashPassword } from "../lib/auth";
 

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, tenantsTable, usersTable, classesTable, examsTable, examSessionsTable } from "@workspace/db";
-import { eq, count, avg, sql } from "drizzle-orm";
+import { eq, count, avg, sql } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();
@@ -38,7 +38,7 @@ router.get("/stats", async (req, res) => {
     .where(eq(examsTable.tenantId, tid));
   const thisMonth = new Date(); thisMonth.setDate(1); thisMonth.setHours(0,0,0,0);
   const [thisMonthResult] = await db.select({ count: count() }).from(examsTable)
-    .where(sql`tenant_id = ${tid} AND created_at >= ${thisMonth}`);
+    .where(sql`tenant_id = ${tid} AND created_at >= ${thisMonth.toISOString()}`);
   const [totalSessionsResult] = await db.select({ count: count() }).from(examSessionsTable)
     .innerJoin(examsTable, eq(examSessionsTable.examId, examsTable.id))
     .where(eq(examsTable.tenantId, tid));

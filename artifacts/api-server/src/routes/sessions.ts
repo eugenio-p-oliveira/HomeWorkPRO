@@ -3,7 +3,7 @@ import {
   db, examsTable, examSessionsTable, studentAnswersTable, questionsTable,
   questionOptionsTable, classStudentsTable, activityLogTable
 } from "@workspace/db";
-import { eq, and, sql, count, inArray } from "drizzle-orm";
+import { eq, and, sql, count, inArray } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();
@@ -181,7 +181,7 @@ router.post("/student/sessions/:sessionId/submit", async (req, res) => {
   }, 0);
   await db.update(examSessionsTable).set({
     status: "submitted", submittedAt: new Date(),
-    score: String(score), maxScore: String(maxScore),
+    score, maxScore,
   }).where(eq(examSessionsTable.id, sessionId));
   await db.insert(activityLogTable).values({
     tenantId: tenant.id, userId: user.id,

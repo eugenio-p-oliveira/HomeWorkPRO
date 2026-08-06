@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, tenantsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and } from "@workspace/db";
 import { LoginBody, RegisterTenantBody } from "@workspace/api-zod";
 import { hashPassword, verifyPasswordLegacy, generateToken, requireAuth } from "../lib/auth";
 import slugify from "../lib/slugify";

@@ -1,19 +1,20 @@
-import { pgTable, serial, text, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { sqliteTimestamp } from "./sqlite";
 
-export const planEnum = pgEnum("plan", ["free", "basic", "premium"]);
+export const planEnum = ["free", "basic", "premium"] as const;
 
-export const tenantsTable = pgTable("tenants", {
-  id: serial("id").primaryKey(),
+export const tenantsTable = sqliteTable("tenants", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   logoUrl: text("logo_url"),
   primaryColor: text("primary_color"),
-  plan: planEnum("plan").notNull().default("free"),
-  educationalLevels: text("educational_levels").array().notNull().default([]),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  plan: text("plan", { enum: planEnum }).notNull().default("free"),
+  educationalLevels: text("educational_levels", { mode: "json" }).$type<string[]>().notNull().default([]),
+  createdAt: sqliteTimestamp("created_at").notNull().default(new Date()),
+  updatedAt: sqliteTimestamp("updated_at").notNull().default(new Date()),
 });
 
 export const insertTenantSchema = createInsertSchema(tenantsTable).omit({ id: true, createdAt: true, updatedAt: true });
