@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/Layout";
 import { LogOut, MessageSquare, Bell, BookOpen, Calendar, TrendingUp, Users, Mail, AlertTriangle, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
+import { API_URL } from "@/lib/api-url";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from "recharts";
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
@@ -21,8 +22,10 @@ export default function GuardianDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
-  const api = (path: string) => {
-    return fetch(`/api${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  const api = (path: string, init: RequestInit = {}) => {
+    const headers = new Headers(init.headers);
+    headers.set("Authorization", `Bearer ${token}`);
+    return fetch(`${API_URL}/api${path}`, { ...init, headers });
   };
 
   useEffect(() => {
@@ -56,7 +59,7 @@ export default function GuardianDashboardPage() {
   };
 
   const handleMarkRead = async (msgId: number) => {
-    const res = await api(`/guardians/${guardian!.id}/messages/${msgId}/read`);
+    const res = await api(`/guardians/${guardian!.id}/messages/${msgId}/read`, { method: "PATCH" });
     if (res.ok) {
       setMessages(prev => prev.map(m => m.id === msgId ? { ...m, isRead: true } : m));
     }

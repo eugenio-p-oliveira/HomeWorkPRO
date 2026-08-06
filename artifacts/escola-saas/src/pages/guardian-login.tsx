@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { School, Eye, EyeOff } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import { API_URL } from "@/lib/api-url";
 
 export default function GuardianLoginPage() {
   const { login } = useGuardianAuth();
@@ -18,7 +19,7 @@ export default function GuardianLoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/guardians/login", {
+      const res = await fetch(`${API_URL}/api/guardians/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

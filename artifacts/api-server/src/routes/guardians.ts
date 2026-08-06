@@ -20,6 +20,14 @@ function requireGuardianAuth(req: any, res: any, next: any) {
   next();
 }
 
+function requireOwnGuardian(req: any, res: any, guardianId: number): boolean {
+  if (req.guardianId !== guardianId) {
+    res.status(403).json({ error: "Forbidden" });
+    return false;
+  }
+  return true;
+}
+
 // GUARDIAN LOGIN (public, no auth required)
 router.post("/guardians/login", async (req, res) => {
   const { email, password } = req.body;
@@ -45,6 +53,7 @@ router.get("/guardians/me", requireGuardianAuth, async (req, res) => {
 // GUARDIAN'S STUDENTS
 router.get("/guardians/:id/students", requireGuardianAuth, async (req, res) => {
   const guardianId = parseInt(req.params.id);
+  if (!requireOwnGuardian(req, res, guardianId)) return;
   const tenantId = (req as any).tenantId;
   const [guardian] = await db.select().from(guardiansTable)
     .where(and(eq(guardiansTable.id, guardianId), eq(guardiansTable.tenantId, tenantId)));
@@ -65,6 +74,7 @@ router.get("/guardians/:id/students", requireGuardianAuth, async (req, res) => {
 // GUARDIAN STATS (aggregated across all students)
 router.get("/guardians/:id/stats", requireGuardianAuth, async (req, res) => {
   const guardianId = parseInt(req.params.id);
+  if (!requireOwnGuardian(req, res, guardianId)) return;
   const tenantId = (req as any).tenantId;
   const [guardian] = await db.select().from(guardiansTable)
     .where(and(eq(guardiansTable.id, guardianId), eq(guardiansTable.tenantId, tenantId)));
@@ -173,6 +183,7 @@ router.get("/guardians/:id/stats", requireGuardianAuth, async (req, res) => {
 // GUARDIAN MESSAGES
 router.get("/guardians/:id/messages", requireGuardianAuth, async (req, res) => {
   const guardianId = parseInt(req.params.id);
+  if (!requireOwnGuardian(req, res, guardianId)) return;
   const tenantId = (req as any).tenantId;
   const [guardian] = await db.select().from(guardiansTable)
     .where(and(eq(guardiansTable.id, guardianId), eq(guardiansTable.tenantId, tenantId)));
@@ -193,6 +204,7 @@ router.get("/guardians/:id/messages", requireGuardianAuth, async (req, res) => {
 
 router.patch("/guardians/:id/messages/:msgId/read", requireGuardianAuth, async (req, res) => {
   const guardianId = parseInt(req.params.id);
+  if (!requireOwnGuardian(req, res, guardianId)) return;
   const msgId = parseInt(req.params.msgId);
   const tenantId = (req as any).tenantId;
   // Verify message belongs to this guardian before marking read

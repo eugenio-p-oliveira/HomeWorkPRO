@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { API_URL } from "./api-url";
 
 interface Guardian {
   id: number;
@@ -39,7 +40,7 @@ export function GuardianAuthProvider({ children }: { children: React.ReactNode }
     if (token) {
       const payload = decodeTokenPayload(token);
       if (payload?.guardianId && payload.exp && payload.exp > Date.now()) {
-        fetch("/api/guardians/me", { headers: { Authorization: `Bearer ${token}` } })
+        fetch(`${API_URL}/api/guardians/me`, { headers: { Authorization: `Bearer ${token}` } })
           .then(async (res) => {
             if (!res.ok) throw new Error("Invalid guardian session");
             return res.json();
