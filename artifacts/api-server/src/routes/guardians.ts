@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { db, guardiansTable, studentGuardiansTable, usersTable, parentMessagesTable, schoolEventsTable, parentTipsTable, examSessionsTable, examsTable, subjectsTable, tenantsTable } from "@workspace/db";
 import { eq, and, desc, inArray, sql, count } from "@workspace/db";
-import { hashPassword, verifyPasswordLegacy, generateGuardianToken, verifyToken, requireAuth } from "../lib/auth";
+import { hashPassword, verifyPasswordLegacy, generateGuardianToken, verifyToken, requireAuth, requireRole } from "../lib/auth";
+import { z } from "zod";
 
 const router = Router();
 
@@ -216,11 +217,25 @@ router.patch("/guardians/:id/messages/:msgId/read", requireGuardianAuth, async (
 });
 
 // SEND MESSAGE (staff -> guardian)
-router.post("/guardians/messages", requireAuth, async (req, res) => {
+router.post("/guardians/messages", requireAuth, requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
   const sender = (req as any).user;
-  const { guardianId, studentId, type, title, body } = req.body;
-  if (!guardianId || !studentId || !title || !body) { res.status(400).json({ error: "Missing fields" }); return; }
+  const parsed = z.object({
+    guardianId: z.coerce.number().int().positive(),
+    studentId: z.coerce.number().int().positive(),
+    type: z.enum(["exam_alert", "exam_result", "activity_reminder", "general_tip", "custom_message"]).optional(),
+    title: z.string().trim().min(1).max(160),
+    body: z.string().trim().min(1).max(5000),
+  }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Dados inválidos", details: parsed.error.flatten() }); return; }
+  const { guardianId, studentId, type, title, body } = parsed.data;
+  const [guardian] = await db.select({ id: guardiansTable.id }).from(guardiansTable)
+    .where(and(eq(guardiansTable.id, guardianId), eq(guardiansTable.tenantId, tenant.id)));
+  const [student] = await db.select({ id: usersTable.id, role: usersTable.role }).from(usersTable)
+    .where(and(eq(usersTable.id, studentId), eq(usersTable.tenantId, tenant.id), eq(usersTable.role, "student")));
+  const [link] = await db.select({ id: studentGuardiansTable.id }).from(studentGuardiansTable)
+    .where(and(eq(studentGuardiansTable.guardianId, guardianId), eq(studentGuardiansTable.studentId, studentId)));
+  if (!guardian || !student || !link) { res.status(404).json({ error: "Responsável ou aluno não encontrado nesta instituição" }); return; }
   const [msg] = await db.insert(parentMessagesTable).values({
     tenantId: tenant.id, guardianId, studentId, senderId: sender.id,
     type: type || "custom_message", title, body, isRead: false,
@@ -247,16 +262,25 @@ router.get("/guardians/tips", requireGuardianAuth, async (req, res) => {
 });
 
 // CRUD GUARDIANS (for admin/coordinator)
-router.get("/guardians", requireAuth, async (req, res) => {
+router.get("/guardians", requireAuth, requireRole("admin", "coordinator"), async (req, res) => {
   const tenant = (req as any).tenant;
   const guardians = await db.select().from(guardiansTable).where(eq(guardiansTable.tenantId, tenant.id));
   res.json(guardians.map(g => ({ id: g.id, name: g.name, email: g.email, phone: g.phone, createdAt: g.createdAt.toISOString() })));
 });
 
-router.post("/guardians", requireAuth, async (req, res) => {
+router.post("/guardians", requireAuth, requireRole("admin", "coordinator"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const { name, email, password, phone } = req.body;
-  if (!name || !email || !password) { res.status(400).json({ error: "Missing required fields" }); return; }
+  const parsed = z.object({
+    name: z.string().trim().min(2).max(120),
+    email: z.string().trim().email().max(255),
+    password: z.string().min(8).max(128),
+    phone: z.string().trim().max(40).optional().nullable(),
+  }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Dados inválidos", details: parsed.error.flatten() }); return; }
+  const { name, email, password, phone } = parsed.data;
+  const [existing] = await db.select({ id: guardiansTable.id }).from(guardiansTable)
+    .where(and(eq(guardiansTable.tenantId, tenant.id), eq(guardiansTable.email, email)));
+  if (existing) { res.status(409).json({ error: "Já existe um responsável com este e-mail" }); return; }
   const [guardian] = await db.insert(guardiansTable).values({
     tenantId: tenant.id, name, email, phone,
     passwordHash: await hashPassword(password),
@@ -264,10 +288,19 @@ router.post("/guardians", requireAuth, async (req, res) => {
   res.status(201).json({ id: guardian.id, name: guardian.name, email: guardian.email, phone: guardian.phone, createdAt: guardian.createdAt.toISOString() });
 });
 
-router.put("/guardians/:guardianId", requireAuth, async (req, res) => {
+router.put("/guardians/:guardianId", requireAuth, requireRole("admin", "coordinator"), async (req, res) => {
   const tenant = (req as any).tenant;
   const guardianId = parseInt(req.params.guardianId as string);
-  const { name, email, phone } = req.body;
+  const parsed = z.object({
+    name: z.string().trim().min(2).max(120),
+    email: z.string().trim().email().max(255),
+    phone: z.string().trim().max(40).optional().nullable(),
+  }).safeParse(req.body);
+  if (!Number.isInteger(guardianId) || !parsed.success) { res.status(400).json({ error: "Dados inválidos" }); return; }
+  const { name, email, phone } = parsed.data;
+  const [duplicate] = await db.select({ id: guardiansTable.id }).from(guardiansTable)
+    .where(and(eq(guardiansTable.tenantId, tenant.id), eq(guardiansTable.email, email)));
+  if (duplicate && duplicate.id !== guardianId) { res.status(409).json({ error: "Já existe um responsável com este e-mail" }); return; }
   const [guardian] = await db.update(guardiansTable)
     .set({ name, email, phone, updatedAt: new Date() })
     .where(and(eq(guardiansTable.id, guardianId), eq(guardiansTable.tenantId, tenant.id)))
@@ -276,22 +309,26 @@ router.put("/guardians/:guardianId", requireAuth, async (req, res) => {
   res.json({ id: guardian.id, name: guardian.name, email: guardian.email, phone: guardian.phone, createdAt: guardian.createdAt.toISOString() });
 });
 
-router.delete("/guardians/:guardianId", requireAuth, async (req, res) => {
+router.delete("/guardians/:guardianId", requireAuth, requireRole("admin", "coordinator"), async (req, res) => {
   const tenant = (req as any).tenant;
   const guardianId = parseInt(req.params.guardianId as string);
   await db.delete(guardiansTable).where(and(eq(guardiansTable.id, guardianId), eq(guardiansTable.tenantId, tenant.id)));
   res.json({ success: true });
 });
 
-router.post("/guardians/:guardianId/students", requireAuth, async (req, res) => {
+router.post("/guardians/:guardianId/students", requireAuth, requireRole("admin", "coordinator"), async (req, res) => {
   const tenant = (req as any).tenant;
   const guardianId = parseInt(req.params.guardianId as string);
-  const { studentId, relation } = req.body;
-  if (!studentId) { res.status(400).json({ error: "Missing studentId" }); return; }
+  const parsed = z.object({
+    studentId: z.coerce.number().int().positive(),
+    relation: z.enum(["parent", "stepparent", "grandparent", "guardian", "other"]).optional(),
+  }).safeParse(req.body);
+  if (!Number.isInteger(guardianId) || !parsed.success) { res.status(400).json({ error: "Dados inválidos" }); return; }
+  const { studentId, relation } = parsed.data;
   const [guardian] = await db.select().from(guardiansTable).where(and(eq(guardiansTable.id, guardianId), eq(guardiansTable.tenantId, tenant.id)));
   if (!guardian) { res.status(404).json({ error: "Guardian not found" }); return; }
   const [student] = await db.select().from(usersTable).where(and(eq(usersTable.id, studentId), eq(usersTable.tenantId, tenant.id)));
-  if (!student) { res.status(404).json({ error: "Student not found" }); return; }
+  if (!student || student.role !== "student") { res.status(404).json({ error: "Student not found" }); return; }
   await db.insert(studentGuardiansTable).values({
     studentId, guardianId, relation: relation || "parent",
   }).onConflictDoNothing();

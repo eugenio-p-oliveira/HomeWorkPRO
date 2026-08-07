@@ -71,7 +71,12 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 {tenant?.plan !== "premium" && (
-                  <Button variant="outline" size="sm">Fazer upgrade</Button>
+                  <a
+                    href="mailto:eugenio.p.oliveira@outlook.com?subject=Interesse%20em%20upgrade%20do%20HomeWorkPRO"
+                    className="inline-flex"
+                  >
+                    <Button variant="outline" size="sm">Falar sobre upgrade</Button>
+                  </a>
                 )}
               </div>
             </CardContent>

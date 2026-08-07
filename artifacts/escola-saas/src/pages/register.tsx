@@ -36,7 +36,7 @@ export default function RegisterPage() {
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <School className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-bold text-foreground">EduSaaS</span>
+           <span className="font-bold text-foreground">HomeWorkPRO</span>
         </div>
 
         <h1 className="text-2xl font-bold text-foreground mb-1">Cadastrar instituição</h1>

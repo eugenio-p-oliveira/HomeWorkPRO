@@ -17,6 +17,7 @@ import ExamsPage from "@/pages/exams";
 import ClassesPage from "@/pages/classes";
 import SubjectsPage from "@/pages/subjects";
 import SeriesPage from "@/pages/series";
+import LegalPage from "@/pages/legal";
 
 /* Lazy load heavier pages */
 const ExamDetailPage = lazy(() => import("@/pages/exam-detail"));
@@ -128,6 +129,15 @@ function Router() {
       </Route>
       <Route path="/pricing">
         <Redirect to="/#planos" />
+      </Route>
+      <Route path="/privacy">
+        <LegalPage topic="privacy" />
+      </Route>
+      <Route path="/terms">
+        <LegalPage topic="terms" />
+      </Route>
+      <Route path="/security">
+        <LegalPage topic="security" />
       </Route>
       <Route path="/">
         <LandingPage />

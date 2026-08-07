@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { db, tenantsTable, usersTable, classesTable, examsTable, examSessionsTable } from "@workspace/db";
 import { eq, count, avg, sql } from "@workspace/db";
-import { requireAuth } from "../lib/auth";
+import { requireAuth, requireRole } from "../lib/auth";
+import { z } from "zod";
 
 const router = Router();
 
@@ -12,9 +13,19 @@ router.get("/current", async (req, res) => {
   res.json({ ...tenant, createdAt: tenant.createdAt.toISOString(), updatedAt: tenant.updatedAt.toISOString() });
 });
 
-router.put("/current", async (req, res) => {
+router.put("/current", requireRole("admin"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const { name, logoUrl, primaryColor, educationalLevels } = req.body;
+  const parsed = z.object({
+    name: z.string().trim().min(2).max(160),
+    logoUrl: z.string().url().max(500).nullable().optional(),
+    primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+    educationalLevels: z.array(z.enum(["infantil", "fundamental", "medio", "tecnico", "superior"])).max(5).optional(),
+  }).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Dados inválidos", details: parsed.error.flatten() });
+    return;
+  }
+  const { name, logoUrl, primaryColor, educationalLevels } = parsed.data;
   const [updated] = await db.update(tenantsTable)
     .set({ name, logoUrl, primaryColor, educationalLevels, updatedAt: new Date() })
     .where(eq(tenantsTable.id, tenant.id))

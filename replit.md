@@ -1,4 +1,4 @@
-# EduSaaS — Plataforma Educacional Multi-tenant
+# HomeWorkPRO — Plataforma Educacional Multi-tenant
 
 Plataforma SaaS completa para gestão escolar: criação de provas com correção automática, estrutura acadêmica (séries, turmas, disciplinas), interface de aluno com timer, portal de responsáveis, e relatórios pedagógicos avançados com landing page de planos.
 
@@ -48,7 +48,7 @@ Plataforma SaaS completa para gestão escolar: criação de provas com correçã
 - **Teacher**: Exam creation, class management, student performance reports, send messages to guardians.
 - **Student**: Browse exams, take exams with countdown timer, view detailed results.
 - **Guardian/Parent**: Dedicated portal with desempenho por aluno, radar chart por disciplina, mensagens da escola, calendário de eventos, dicas pedagógicas. Login: `maria.alves@teste.com / senha123`.
-- **Landing page**: Página pública (`/`) com hero, 6 recursos, passo a passo, depoimentos, FAQ, 4 planos de preço (Inicial R$79, Intermediário R$179, Robusto R$349, Customizado sob consulta). Animações de scroll reveal.
+- **Landing page**: Página pública (`/`) com hero, 6 recursos, passo a passo, FAQ, planos de referência e links de privacidade, termos e segurança. A contratação paga ainda é comercial, não checkout automático.
 - **Demo**: Página `/demo` com auto-login para 4 perfis: Admin, Professor, Aluno, Responsável. Sem cadastro necessário.
 - **Exam types**: ENEM, Simulado, Prova tradicional, Atividade — com timer, agendamento, múltiplas tentativas.
 

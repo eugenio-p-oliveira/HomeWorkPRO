@@ -49,9 +49,18 @@ export function generateGuardianToken(guardianId: number, tenantId: number): str
   return signTokenPayload({ guardianId, tenantId, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 });
 }
 
-export function verifyToken(token: string): { userId: number; tenantId: number; guardianId?: number } | null {
+export type TokenPayload = {
+  userId?: number;
+  guardianId?: number;
+  tenantId: number;
+  exp: number;
+};
+
+export function verifyToken(token: string): TokenPayload | null {
   try {
-    const [encodedPayload, providedSignature] = token.split(".");
+    const parts = token.split(".");
+    if (parts.length !== 2) return null;
+    const [encodedPayload, providedSignature] = parts;
     if (!encodedPayload || !providedSignature) return null;
     const expectedSignature = crypto
       .createHmac("sha256", getTokenSecret())
@@ -61,8 +70,23 @@ export function verifyToken(token: string): { userId: number; tenantId: number; 
     const provided = Buffer.from(providedSignature);
     if (expected.length !== provided.length || !crypto.timingSafeEqual(expected, provided)) return null;
     const payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8"));
-    if (payload.exp < Date.now()) return null;
-    return { userId: payload.userId, tenantId: payload.tenantId, guardianId: payload.guardianId };
+    if (
+      typeof payload !== "object" ||
+      typeof payload.tenantId !== "number" ||
+      !Number.isInteger(payload.tenantId) ||
+      typeof payload.exp !== "number" ||
+      !Number.isFinite(payload.exp) ||
+      payload.exp <= Date.now()
+    ) return null;
+    const hasUser = typeof payload.userId === "number" && Number.isInteger(payload.userId);
+    const hasGuardian = typeof payload.guardianId === "number" && Number.isInteger(payload.guardianId);
+    if (hasUser === hasGuardian) return null;
+    return {
+      tenantId: payload.tenantId,
+      exp: payload.exp,
+      ...(hasUser ? { userId: payload.userId } : {}),
+      ...(hasGuardian ? { guardianId: payload.guardianId } : {}),
+    };
   } catch {
     return null;
   }
@@ -76,7 +100,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   }
   const token = authHeader.slice(7);
   const decoded = verifyToken(token);
-  if (!decoded) {
+  if (!decoded || decoded.userId === undefined) {
     res.status(401).json({ error: "Invalid or expired token" });
     return;
   }

@@ -70,7 +70,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-bold text-sm text-sidebar-foreground leading-tight truncate">
-              {user?.tenant?.name ?? "EduSaaS"}
+              {user?.tenant?.name ?? "HomeWorkPRO"}
             </div>
             <div className="text-xs text-muted-foreground capitalize">{user?.tenant?.plan}</div>
           </div>
@@ -130,7 +130,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <button onClick={() => setMobileOpen(true)} className="p-1 -ml-1">
             <Menu className="w-5 h-5" />
           </button>
-          <span className="font-semibold text-sm">{user?.tenant?.name ?? "EduSaaS"}</span>
+          <span className="font-semibold text-sm">{user?.tenant?.name ?? "HomeWorkPRO"}</span>
         </div>
         {children}
       </main>

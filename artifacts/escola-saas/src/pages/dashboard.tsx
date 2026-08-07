@@ -3,9 +3,10 @@ import Layout, { PageHeader } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, GraduationCap, FileText, TrendingUp, Activity, BookOpen, CheckCircle, Clock } from "lucide-react";
+import { Users, GraduationCap, FileText, TrendingUp, Activity, BookOpen, CheckCircle, Clock, ArrowRight, CheckCircle2 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { Link } from "wouter";
 
 function StatCard({ label, value, icon: Icon, color }: { label: string; value: string | number; icon: any; color: string }) {
   return (
@@ -36,11 +37,49 @@ export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useGetTenantStats();
   const { data: activity } = useGetRecentActivity();
   const { data: subjectPerf } = useGetSubjectPerformance();
+  const setupSteps = [
+    { label: "Configurar séries", done: (stats?.totalClasses ?? 0) > 0, href: "/series" },
+    { label: "Criar uma turma", done: (stats?.totalClasses ?? 0) > 0, href: "/classes" },
+    { label: "Adicionar usuários", done: (stats?.totalStudents ?? 0) > 0 && (stats?.totalTeachers ?? 0) > 0, href: "/users" },
+    { label: "Criar a primeira prova", done: (stats?.totalExams ?? 0) > 0, href: "/exams" },
+  ];
+  const setupComplete = setupSteps.filter(step => step.done).length;
 
   return (
     <Layout>
       <div className="p-8">
         <PageHeader title="Dashboard" description="Visão geral da instituição" />
+
+        {stats && setupComplete < setupSteps.length && (
+          <Card className="mb-8 border-primary/20 bg-primary/[0.03]">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle className="text-base">Configure sua instituição</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Complete estes passos para começar a acompanhar sua primeira turma.
+                  </p>
+                </div>
+                <Badge variant="secondary">{setupComplete}/{setupSteps.length}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
+                {setupSteps.map(step => (
+                  <Link key={step.label} href={step.href} className="group">
+                    <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-3 transition-colors group-hover:border-primary/40">
+                      {step.done
+                        ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        : <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/40 shrink-0" />}
+                      <span className={`text-sm ${step.done ? "text-muted-foreground line-through" : "font-medium"}`}>{step.label}</span>
+                      {!step.done && <ArrowRight className="w-3.5 h-3.5 ml-auto text-primary opacity-0 group-hover:opacity-100 transition-opacity" />}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

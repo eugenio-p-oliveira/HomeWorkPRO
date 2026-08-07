@@ -145,7 +145,7 @@ export default function LandingPage() {
             <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
               <School className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-bold text-lg">HomeWork PRO</span>
+            <span className="font-bold text-lg">HomeWorkPRO</span>
           </div>
           <div className="hidden md:flex items-center gap-6">
             <a href="#recursos" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Recursos</a>
@@ -204,11 +204,11 @@ export default function LandingPage() {
             <div className="mt-10 flex items-center justify-center gap-6 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <Check className="w-4 h-4 text-primary" />
-                <span>Sem cartão de crédito</span>
+                <span>Demonstração gratuita</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Check className="w-4 h-4 text-primary" />
-                <span>Cancelamento a qualquer momento</span>
+                <span>Dados separados por instituição</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Check className="w-4 h-4 text-primary" />
@@ -339,15 +339,15 @@ export default function LandingPage() {
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold mb-3">O que dizem nossos clientes</h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Escolas e professores que transformaram sua gestão com o EduSaaS
+              Uma experiência clara para escolas, professores e responsáveis
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { name: "Diretora Fernanda Lima", school: "Colégio Integral, SP", text: "Reduzimos em 60% o tempo de correção de provas. Os relatórios BI nos ajudam a identificar alunos em risco antes que seja tarde.", stars: 5 },
-              { name: "Prof. João Mendes", school: "Escola Futuro, RJ", text: "Crio provas do tipo ENEM em minutos. A correção automática é impecável e os alunos adoram ver o feedback instantâneo.", stars: 5 },
-              { name: "Coord. Pedro Oliveira", school: "Rede Ensino Mais, MG", text: "O portal de responsáveis diminuiu em 80% as ligações para a secretaria. Pais acompanham tudo pelo celular.", stars: 5 },
-            ].map((t, i) => (
+             {[
+               { name: "Para administradores", school: "Visão da instituição", text: "Acompanhe turmas, avaliações e resultados em um único lugar, com permissões por perfil.", stars: 5 },
+               { name: "Para professores", school: "Visão pedagógica", text: "Crie avaliações, acompanhe o desempenho e use os resultados para orientar suas próximas aulas.", stars: 5 },
+               { name: "Para responsáveis", school: "Portal da família", text: "Consulte resultados, mensagens e próximos eventos sem depender de planilhas ou ligações.", stars: 5 },
+             ].map((t, i) => (
               <Card key={i} className="h-full">
                 <CardContent className="pt-6 pb-6 flex flex-col h-full">
                   <div className="flex gap-1 mb-4">
@@ -383,12 +383,12 @@ export default function LandingPage() {
           </div>
           <div className="space-y-4">
             {[
-              { q: "Preciso instalar algo?", a: "Não. O EduSaaS é 100% na nuvem. Acesse de qualquer dispositivo com internet." },
-              { q: "Posso migrar dados da minha escola?", a: "Sim. Oferecemos importação via planilha para alunos, turmas e notas. No plano Customizado fazemos a migração completa." },
+              { q: "Preciso instalar algo?", a: "Não. O HomeWorkPRO funciona no navegador. Acesse de qualquer dispositivo com internet." },
+               { q: "Posso migrar dados da minha escola?", a: "A versão atual está focada no cadastro seguro dentro da plataforma. A importação assistida por planilha será disponibilizada em uma etapa posterior; não anunciamos esse recurso como disponível hoje." },
               { q: "Os alunos precisam pagar?", a: "Não. Alunos, professores e responsáveis usam a plataforma gratuitamente. Apenas a instituição contrata o plano." },
               { q: "Como funciona a correção automática?", a: "Para questões de múltipla escolha, a correção é instantânea. Para questões dissertativas, o professor corrige manualmente e o sistema calcula a nota final." },
               { q: "É possível personalizar a aparência?", a: "Sim. Nos planos Intermediário e superiores você pode adicionar o logo da escola e cores personalizadas." },
-              { q: "Qual o prazo de cancelamento?", a: "Você pode cancelar a qualquer momento. Não há multa nem fidelidade." },
+               { q: "Como contrato um plano?", a: "A demonstração e o cadastro inicial estão disponíveis agora. Para contratar um plano pago, fale com nossa equipe para confirmar disponibilidade, limites, valores e condições do contrato." },
             ].map((faq, i) => (
               <Card key={i} className="overflow-hidden">
                 <CardContent className="p-0">
@@ -458,17 +458,20 @@ export default function LandingPage() {
                       </div>
                     ))}
                   </div>
-                  <Link href="/register">
-                    <Button className="w-full" variant={plan.highlight ? "default" : "outline"}>
-                      {plan.price ? "Começar" : "Falar com Vendas"}
-                    </Button>
-                  </Link>
+                   <a
+                     href={`mailto:eugenio.p.oliveira@outlook.com?subject=${encodeURIComponent(`Interesse no plano ${plan.name}`)}`}
+                     className="block"
+                   >
+                     <Button className="w-full" variant={plan.highlight ? "default" : "outline"}>
+                       {plan.price ? "Solicitar acesso" : "Falar com Vendas"}
+                     </Button>
+                   </a>
                 </CardContent>
               </Card>
             ))}
           </div>
           <div className="mt-10 text-center text-sm text-muted-foreground">
-            <p>Preços em Reais (R$). Faturamento mensal. Desconto de 15% para pagamento anual.</p>
+             <p>Valores de referência em Reais (R$). A contratação, o faturamento e as condições comerciais são confirmados pela equipe.</p>
           </div>
         </div>
       </section>
@@ -507,14 +510,19 @@ export default function LandingPage() {
             <div>
               <h4 className="font-semibold mb-3">Contato</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
-                <p>eugenio.p.oliveira@outlook.com</p>
+                 <p>eugenio.p.oliveira@outlook.com</p>
                 <p>(86)99983-9422</p>
-                <p>Teresina - PI</p>
+                 <p>Teresina - PI</p>
+                 <div className="pt-2 space-y-2">
+                   <Link href="/privacy" className="block hover:text-foreground">Privacidade</Link>
+                   <Link href="/terms" className="block hover:text-foreground">Termos de uso</Link>
+                   <Link href="/security" className="block hover:text-foreground">Segurança</Link>
+                 </div>
               </div>
             </div>
           </div>
           <div className="mt-10 pt-6 border-t border-border text-center text-sm text-muted-foreground">
-            © 2026 HomeWork PRO. Todos os direitos reservados - Desenvolvido por: Eugênio Oliveira.
+            © 2026 HomeWorkPRO. Todos os direitos reservados - Desenvolvido por: Eugênio Oliveira.
           </div>
         </div>
       </footer>

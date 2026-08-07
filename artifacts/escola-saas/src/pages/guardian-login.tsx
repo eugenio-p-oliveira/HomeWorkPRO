@@ -46,7 +46,7 @@ export default function GuardianLoginPage() {
           <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
             <School className="w-5 h-5" />
           </div>
-          <span className="font-bold text-lg">EduSaaS</span>
+          <span className="font-bold text-lg">HomeWorkPRO</span>
         </div>
         <div className="space-y-4">
           <h1 className="text-3xl font-bold">Portal de Responsáveis</h1>

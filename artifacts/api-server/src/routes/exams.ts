@@ -4,8 +4,9 @@ import {
   usersTable, subjectsTable, classesTable
 } from "@workspace/db";
 import { eq, and, sql, count, avg, inArray } from "@workspace/db";
-import { requireAuth } from "../lib/auth";
+import { requireAuth, requireRole } from "../lib/auth";
 import { activityLogTable } from "@workspace/db";
+import { z } from "zod";
 
 const router = Router();
 router.use(requireAuth);
@@ -66,10 +67,36 @@ router.get("/", async (req, res) => {
   })));
 });
 
-router.post("/", async (req, res) => {
+const examInputSchema = z.object({
+  title: z.string().trim().min(2).max(200),
+  type: z.enum(["enem", "simulado", "traditional", "homework"]),
+  timeLimitMinutes: z.coerce.number().int().positive().max(1440).optional().nullable(),
+  startsAt: z.string().datetime().optional().nullable(),
+  endsAt: z.string().datetime().optional().nullable(),
+  maxAttempts: z.coerce.number().int().positive().max(100).optional().nullable(),
+  classId: z.coerce.number().int().positive().optional().nullable(),
+  subjectId: z.coerce.number().int().positive().optional().nullable(),
+  isPublic: z.boolean().optional(),
+  showResultImmediately: z.boolean().optional(),
+});
+
+router.post("/", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
   const user = (req as any).user;
-  const { title, type, timeLimitMinutes, startsAt, endsAt, maxAttempts, classId, subjectId, isPublic, showResultImmediately } = req.body;
+  const parsed = examInputSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Dados inválidos", details: parsed.error.flatten() }); return; }
+  const { title, type, timeLimitMinutes, startsAt, endsAt, maxAttempts, classId, subjectId, isPublic, showResultImmediately } = parsed.data;
+  if (startsAt && endsAt && new Date(startsAt) >= new Date(endsAt)) {
+    res.status(400).json({ error: "O término deve ser posterior ao início" }); return;
+  }
+  if (classId) {
+    const [ownedClass] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.id, classId), eq(classesTable.tenantId, tenant.id)));
+    if (!ownedClass) { res.status(400).json({ error: "Turma inválida" }); return; }
+  }
+  if (subjectId) {
+    const [ownedSubject] = await db.select({ id: subjectsTable.id }).from(subjectsTable).where(and(eq(subjectsTable.id, subjectId), eq(subjectsTable.tenantId, tenant.id)));
+    if (!ownedSubject) { res.status(400).json({ error: "Disciplina inválida" }); return; }
+  }
   const [exam] = await db.insert(examsTable).values({
     tenantId: tenant.id,
     title,
@@ -99,16 +126,29 @@ router.post("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   const tenant = (req as any).tenant;
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const exam = await getExamWithQuestions(id);
   if (!exam || exam.tenantId !== tenant.id) { res.status(404).json({ error: "Not found" }); return; }
   res.json(exam);
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const id = parseInt(req.params.id);
-  const { title, type, timeLimitMinutes, startsAt, endsAt, maxAttempts, classId, subjectId, isPublic, showResultImmediately } = req.body;
+  const id = parseInt(String(req.params.id));
+  const parsed = examInputSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Dados inválidos", details: parsed.error.flatten() }); return; }
+  const { title, type, timeLimitMinutes, startsAt, endsAt, maxAttempts, classId, subjectId, isPublic, showResultImmediately } = parsed.data;
+  if (startsAt && endsAt && new Date(startsAt) >= new Date(endsAt)) {
+    res.status(400).json({ error: "O término deve ser posterior ao início" }); return;
+  }
+  if (classId) {
+    const [ownedClass] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.id, classId), eq(classesTable.tenantId, tenant.id)));
+    if (!ownedClass) { res.status(400).json({ error: "Turma inválida" }); return; }
+  }
+  if (subjectId) {
+    const [ownedSubject] = await db.select({ id: subjectsTable.id }).from(subjectsTable).where(and(eq(subjectsTable.id, subjectId), eq(subjectsTable.tenantId, tenant.id)));
+    if (!ownedSubject) { res.status(400).json({ error: "Disciplina inválida" }); return; }
+  }
   const [exam] = await db.update(examsTable).set({
     title, type, timeLimitMinutes,
     startsAt: startsAt ? new Date(startsAt) : null,
@@ -124,20 +164,21 @@ router.put("/:id", async (req, res) => {
   });
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireRole("admin", "coordinator"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   await db.delete(examsTable).where(and(eq(examsTable.id, id), eq(examsTable.tenantId, tenant.id)));
   res.json({ success: true });
 });
 
-router.post("/:id/publish", async (req, res) => {
+router.post("/:id/publish", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
+  const [qCount] = await db.select({ cnt: count() }).from(questionsTable).where(eq(questionsTable.examId, id));
+  if (Number(qCount?.cnt ?? 0) === 0) { res.status(400).json({ error: "Adicione pelo menos uma questão antes de publicar" }); return; }
   const [exam] = await db.update(examsTable).set({ status: "scheduled", updatedAt: new Date() })
     .where(and(eq(examsTable.id, id), eq(examsTable.tenantId, tenant.id))).returning();
   if (!exam) { res.status(404).json({ error: "Not found" }); return; }
-  const [qCount] = await db.select({ cnt: count() }).from(questionsTable).where(eq(questionsTable.examId, id));
   res.json({
     ...exam, questionsCount: Number(qCount?.cnt ?? 0),
     createdAt: exam.createdAt.toISOString(), updatedAt: exam.updatedAt.toISOString(),

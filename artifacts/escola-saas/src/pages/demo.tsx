@@ -139,7 +139,7 @@ export default function DemoPage() {
               <GraduationCap className="w-5 h-5 text-primary-foreground" />
             </div>
 
-            <span className="font-bold text-lg">EduSaaS</span>
+            <span className="font-bold text-lg">HomeWorkPRO</span>
           </Link>
 
           <Link href="/login">
@@ -154,7 +154,7 @@ export default function DemoPage() {
         <div className="max-w-3xl w-full">
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold mb-3">
-              Demonstração do EduSaaS
+              Demonstração do HomeWorkPRO
             </h1>
 
             <p className="text-muted-foreground max-w-lg mx-auto">

@@ -4,7 +4,8 @@ import {
   examSessionsTable, examsTable, studentAnswersTable, questionsTable
 } from "@workspace/db";
 import { eq, and, count, avg, sql, inArray } from "@workspace/db";
-import { requireAuth } from "../lib/auth";
+import { requireAuth, requireRole } from "../lib/auth";
+import { z } from "zod";
 
 const router = Router();
 router.use(requireAuth);
@@ -22,25 +23,29 @@ router.get("/subjects", async (req, res) => {
   res.json(subjects.map(s => ({ ...s, topicsCount: countMap[s.id] ?? 0, createdAt: s.createdAt.toISOString() })));
 });
 
-router.post("/subjects", async (req, res) => {
+router.post("/subjects", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const { name, color } = req.body;
+  const parsed = z.object({ name: z.string().trim().min(1).max(120), color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().nullable() }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Dados inválidos" }); return; }
+  const { name, color } = parsed.data;
   const [s] = await db.insert(subjectsTable).values({ tenantId: tenant.id, name, color }).returning();
   res.status(201).json({ ...s, topicsCount: 0, createdAt: s.createdAt.toISOString() });
 });
 
-router.put("/subjects/:id", async (req, res) => {
+router.put("/subjects/:id", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const id = parseInt(req.params.id);
-  const { name, color } = req.body;
+  const id = parseInt(String(req.params.id));
+  const parsed = z.object({ name: z.string().trim().min(1).max(120), color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().nullable() }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Dados inválidos" }); return; }
+  const { name, color } = parsed.data;
   const [s] = await db.update(subjectsTable).set({ name, color }).where(and(eq(subjectsTable.id, id), eq(subjectsTable.tenantId, tenant.id))).returning();
   if (!s) { res.status(404).json({ error: "Not found" }); return; }
   res.json({ ...s, topicsCount: 0, createdAt: s.createdAt.toISOString() });
 });
 
-router.delete("/subjects/:id", async (req, res) => {
+router.delete("/subjects/:id", requireRole("admin", "coordinator"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   await db.delete(subjectsTable).where(and(eq(subjectsTable.id, id), eq(subjectsTable.tenantId, tenant.id)));
   res.json({ success: true });
 });
@@ -65,22 +70,40 @@ router.get("/topics", async (req, res) => {
   res.json(topics);
 });
 
-router.post("/topics", async (req, res) => {
-  const { subjectId, name, description } = req.body;
+router.post("/topics", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
+  const tenant = (req as any).tenant;
+  const parsed = z.object({ subjectId: z.coerce.number().int().positive(), name: z.string().trim().min(1).max(160), description: z.string().trim().max(1000).optional().nullable() }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Dados inválidos" }); return; }
+  const { subjectId, name, description } = parsed.data;
+  const [subject] = await db.select({ id: subjectsTable.id }).from(subjectsTable).where(and(eq(subjectsTable.id, subjectId), eq(subjectsTable.tenantId, tenant.id)));
+  if (!subject) { res.status(404).json({ error: "Disciplina não encontrada" }); return; }
   const [t] = await db.insert(topicsTable).values({ subjectId, name, description }).returning();
   res.status(201).json({ ...t, createdAt: t.createdAt.toISOString() });
 });
 
-router.put("/topics/:id", async (req, res) => {
-  const id = parseInt(req.params.id);
-  const { subjectId, name, description } = req.body;
+router.put("/topics/:id", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
+  const tenant = (req as any).tenant;
+  const id = parseInt(String(req.params.id));
+  const parsed = z.object({ subjectId: z.coerce.number().int().positive(), name: z.string().trim().min(1).max(160), description: z.string().trim().max(1000).optional().nullable() }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Dados inválidos" }); return; }
+  const { subjectId, name, description } = parsed.data;
+  const [subject] = await db.select({ id: subjectsTable.id }).from(subjectsTable).where(and(eq(subjectsTable.id, subjectId), eq(subjectsTable.tenantId, tenant.id)));
+  const [ownedTopic] = await db.select({ id: topicsTable.id }).from(topicsTable)
+    .innerJoin(subjectsTable, eq(topicsTable.subjectId, subjectsTable.id))
+    .where(and(eq(topicsTable.id, id), eq(subjectsTable.tenantId, tenant.id)));
+  if (!subject || !ownedTopic) { res.status(404).json({ error: "Tópico ou disciplina não encontrado" }); return; }
   const [t] = await db.update(topicsTable).set({ subjectId, name, description }).where(eq(topicsTable.id, id)).returning();
   if (!t) { res.status(404).json({ error: "Not found" }); return; }
   res.json({ ...t, createdAt: t.createdAt.toISOString() });
 });
 
-router.delete("/topics/:id", async (req, res) => {
-  const id = parseInt(req.params.id);
+router.delete("/topics/:id", requireRole("admin", "coordinator"), async (req, res) => {
+  const tenant = (req as any).tenant;
+  const id = parseInt(String(req.params.id));
+  const [ownedTopic] = await db.select({ id: topicsTable.id }).from(topicsTable)
+    .innerJoin(subjectsTable, eq(topicsTable.subjectId, subjectsTable.id))
+    .where(and(eq(topicsTable.id, id), eq(subjectsTable.tenantId, tenant.id)));
+  if (!ownedTopic) { res.status(404).json({ error: "Not found" }); return; }
   await db.delete(topicsTable).where(eq(topicsTable.id, id));
   res.json({ success: true });
 });
@@ -92,9 +115,11 @@ router.get("/series", async (req, res) => {
   res.json(series.map(s => ({ ...s, createdAt: s.createdAt.toISOString() })));
 });
 
-router.post("/series", async (req, res) => {
+router.post("/series", requireRole("admin", "coordinator"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const { name, educationalLevel, order } = req.body;
+  const parsed = z.object({ name: z.string().trim().min(1).max(120), educationalLevel: z.enum(["infantil", "fundamental", "medio", "tecnico", "superior"]), order: z.coerce.number().int().min(0).max(999).optional() }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Dados inválidos" }); return; }
+  const { name, educationalLevel, order } = parsed.data;
   const [s] = await db.insert(seriesTable).values({ tenantId: tenant.id, name, educationalLevel, order }).returning();
   res.status(201).json({ ...s, createdAt: s.createdAt.toISOString() });
 });
@@ -119,16 +144,20 @@ router.get("/classes", async (req, res) => {
   res.json(classes.map(c => ({ ...c, studentsCount: studentCounts[c.id] ?? 0, createdAt: c.createdAt.toISOString() })));
 });
 
-router.post("/classes", async (req, res) => {
+router.post("/classes", requireRole("admin", "coordinator"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const { serieId, name, shift, year } = req.body;
+  const parsed = z.object({ serieId: z.coerce.number().int().positive(), name: z.string().trim().min(1).max(120), shift: z.enum(["manha", "tarde", "noite", "integral"]), year: z.coerce.number().int().min(2000).max(2200) }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Dados inválidos" }); return; }
+  const { serieId, name, shift, year } = parsed.data;
+  const [serie] = await db.select({ id: seriesTable.id }).from(seriesTable).where(and(eq(seriesTable.id, serieId), eq(seriesTable.tenantId, tenant.id)));
+  if (!serie) { res.status(404).json({ error: "Série não encontrada" }); return; }
   const [c] = await db.insert(classesTable).values({ tenantId: tenant.id, serieId, name, shift, year }).returning();
   res.status(201).json({ ...c, studentsCount: 0, createdAt: c.createdAt.toISOString() });
 });
 
 router.get("/classes/:id", async (req, res) => {
   const tenant = (req as any).tenant;
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const [cls] = await db.select().from(classesTable).where(and(eq(classesTable.id, id), eq(classesTable.tenantId, tenant.id)));
   if (!cls) { res.status(404).json({ error: "Not found" }); return; }
   const [serie] = await db.select().from(seriesTable).where(eq(seriesTable.id, cls.serieId));
@@ -151,26 +180,32 @@ router.get("/classes/:id", async (req, res) => {
   });
 });
 
-router.put("/classes/:id", async (req, res) => {
+router.put("/classes/:id", requireRole("admin", "coordinator"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const id = parseInt(req.params.id);
-  const { serieId, name, shift, year } = req.body;
+  const id = parseInt(String(req.params.id));
+  const parsed = z.object({ serieId: z.coerce.number().int().positive(), name: z.string().trim().min(1).max(120), shift: z.enum(["manha", "tarde", "noite", "integral"]), year: z.coerce.number().int().min(2000).max(2200) }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Dados inválidos" }); return; }
+  const { serieId, name, shift, year } = parsed.data;
+  const [serie] = await db.select({ id: seriesTable.id }).from(seriesTable).where(and(eq(seriesTable.id, serieId), eq(seriesTable.tenantId, tenant.id)));
+  if (!serie) { res.status(404).json({ error: "Série não encontrada" }); return; }
   const [c] = await db.update(classesTable).set({ serieId, name, shift, year }).where(and(eq(classesTable.id, id), eq(classesTable.tenantId, tenant.id))).returning();
   if (!c) { res.status(404).json({ error: "Not found" }); return; }
   res.json({ ...c, studentsCount: 0, createdAt: c.createdAt.toISOString() });
 });
 
-router.delete("/classes/:id", async (req, res) => {
+router.delete("/classes/:id", requireRole("admin", "coordinator"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   await db.delete(classesTable).where(and(eq(classesTable.id, id), eq(classesTable.tenantId, tenant.id)));
   res.json({ success: true });
 });
 
-router.post("/classes/:id/students", async (req, res) => {
+router.post("/classes/:id/students", requireRole("admin", "coordinator"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const id = parseInt(req.params.id);
-  const { studentId } = req.body;
+  const id = parseInt(String(req.params.id));
+  const parsed = z.object({ studentId: z.coerce.number().int().positive() }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Dados inválidos" }); return; }
+  const { studentId } = parsed.data;
   // Verify class belongs to tenant
   const [cls] = await db.select().from(classesTable)
     .where(and(eq(classesTable.id, id), eq(classesTable.tenantId, tenant.id)));
@@ -178,7 +213,7 @@ router.post("/classes/:id/students", async (req, res) => {
   // Verify student belongs to tenant
   const [student] = await db.select().from(usersTable)
     .where(and(eq(usersTable.id, studentId), eq(usersTable.tenantId, tenant.id)));
-  if (!student) { res.status(404).json({ error: "Student not found" }); return; }
+  if (!student || student.role !== "student") { res.status(404).json({ error: "Student not found" }); return; }
   await db.insert(classStudentsTable).values({ classId: id, studentId }).onConflictDoNothing();
   res.json({ success: true });
 });

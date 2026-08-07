@@ -3,6 +3,7 @@ import { db, usersTable, examSessionsTable, examsTable, subjectsTable, questions
 import { eq, and, sql, ilike, avg, count, inArray } from "@workspace/db";
 import { requireAuth, requireRole } from "../lib/auth";
 import { hashPassword } from "../lib/auth";
+import { z } from "zod";
 
 const router = Router();
 router.use(requireAuth);
@@ -24,11 +25,31 @@ router.get("/", async (req, res) => {
   res.json(users.map(serializeUser));
 });
 
-router.post("/", async (req, res) => {
+const userInputSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  email: z.string().trim().email().max(255),
+  password: z.string().min(8).max(128).optional(),
+  role: z.enum(["admin", "coordinator", "teacher", "student"]),
+  registrationNumber: z.string().trim().max(80).optional().nullable(),
+});
+
+router.post("/", requireRole("admin", "coordinator"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const { name, email, password, role, registrationNumber, classId } = req.body;
-  if (!name || !email || !password || !role) {
-    res.status(400).json({ error: "Missing required fields" });
+  const actor = (req as any).user;
+  const parsed = userInputSchema.extend({ password: z.string().min(8).max(128) }).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Dados inválidos", details: parsed.error.flatten() });
+    return;
+  }
+  const { name, email, password, role, registrationNumber } = parsed.data;
+  if (role === "admin" && actor.role !== "admin") {
+    res.status(403).json({ error: "Apenas administradores podem criar administradores" });
+    return;
+  }
+  const [existing] = await db.select({ id: usersTable.id }).from(usersTable)
+    .where(and(eq(usersTable.tenantId, tenant.id), eq(usersTable.email, email)));
+  if (existing) {
+    res.status(409).json({ error: "Já existe um usuário com este e-mail nesta instituição" });
     return;
   }
   const [user] = await db.insert(usersTable).values({
@@ -44,17 +65,39 @@ router.post("/", async (req, res) => {
 
 router.get("/:userId", async (req, res) => {
   const tenant = (req as any).tenant;
-  const userId = parseInt(req.params.userId);
+  const userId = parseInt(String(req.params.userId));
   const [user] = await db.select().from(usersTable)
     .where(and(eq(usersTable.id, userId), eq(usersTable.tenantId, tenant.id)));
   if (!user) { res.status(404).json({ error: "Not found" }); return; }
   res.json(serializeUser(user));
 });
 
-router.put("/:userId", async (req, res) => {
+router.put("/:userId", requireRole("admin", "coordinator"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const userId = parseInt(req.params.userId);
-  const { name, email, role, registrationNumber } = req.body;
+  const actor = (req as any).user;
+  const userId = parseInt(String(req.params.userId));
+  if (!Number.isInteger(userId)) { res.status(400).json({ error: "ID inválido" }); return; }
+  const parsed = userInputSchema.omit({ password: true }).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Dados inválidos", details: parsed.error.flatten() });
+    return;
+  }
+  const { name, email, role, registrationNumber } = parsed.data;
+  const [target] = await db.select().from(usersTable)
+    .where(and(eq(usersTable.id, userId), eq(usersTable.tenantId, tenant.id)));
+  if (!target) { res.status(404).json({ error: "Not found" }); return; }
+  if (target.role === "admin" && actor.role !== "admin") {
+    res.status(403).json({ error: "Apenas administradores podem alterar administradores" });
+    return;
+  }
+  if (role === "admin" && actor.role !== "admin") {
+    res.status(403).json({ error: "Apenas administradores podem atribuir este papel" });
+    return;
+  }
+  if (target.id === actor.id && role !== actor.role) {
+    res.status(400).json({ error: "Você não pode remover seu próprio papel administrativo" });
+    return;
+  }
   const [user] = await db.update(usersTable)
     .set({ name, email, role, registrationNumber, updatedAt: new Date() })
     .where(and(eq(usersTable.id, userId), eq(usersTable.tenantId, tenant.id)))
@@ -63,9 +106,19 @@ router.put("/:userId", async (req, res) => {
   res.json(serializeUser(user));
 });
 
-router.delete("/:userId", async (req, res) => {
+router.delete("/:userId", requireRole("admin", "coordinator"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const userId = parseInt(req.params.userId);
+  const actor = (req as any).user;
+  const userId = parseInt(String(req.params.userId));
+  if (!Number.isInteger(userId)) { res.status(400).json({ error: "ID inválido" }); return; }
+  const [target] = await db.select().from(usersTable)
+    .where(and(eq(usersTable.id, userId), eq(usersTable.tenantId, tenant.id)));
+  if (!target) { res.status(404).json({ error: "Not found" }); return; }
+  if (target.id === actor.id) { res.status(400).json({ error: "Você não pode excluir sua própria conta" }); return; }
+  if (target.role === "admin" && actor.role !== "admin") {
+    res.status(403).json({ error: "Apenas administradores podem excluir administradores" });
+    return;
+  }
   await db.delete(usersTable).where(and(eq(usersTable.id, userId), eq(usersTable.tenantId, tenant.id)));
   res.json({ success: true });
 });
@@ -73,6 +126,10 @@ router.delete("/:userId", async (req, res) => {
 router.get("/:userId/stats", async (req, res) => {
   const tenant = (req as any).tenant;
   const userId = parseInt(req.params.userId);
+  if (!Number.isInteger(userId)) { res.status(400).json({ error: "ID inválido" }); return; }
+  const [student] = await db.select({ id: usersTable.id, role: usersTable.role }).from(usersTable)
+    .where(and(eq(usersTable.id, userId), eq(usersTable.tenantId, tenant.id)));
+  if (!student || student.role !== "student") { res.status(404).json({ error: "Aluno não encontrado" }); return; }
   const sessions = await db.select().from(examSessionsTable)
     .innerJoin(examsTable, eq(examSessionsTable.examId, examsTable.id))
     .where(and(eq(examSessionsTable.studentId, userId), eq(examsTable.tenantId, tenant.id)))
