@@ -33,7 +33,7 @@ router.put("/current", requireRole("admin"), async (req, res) => {
   res.json({ ...updated, createdAt: updated.createdAt.toISOString(), updatedAt: updated.updatedAt.toISOString() });
 });
 
-router.get("/stats", async (req, res) => {
+router.get("/stats", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
   const tid = tenant.id;
 

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import {
   db, examsTable, examSessionsTable, studentAnswersTable, questionsTable,
-  questionOptionsTable, classStudentsTable, activityLogTable
+  questionOptionsTable, classStudentsTable, classesTable, activityLogTable
 } from "@workspace/db";
 import { eq, and, sql, count, inArray } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
@@ -10,10 +10,29 @@ import { z } from "zod";
 const router = Router();
 router.use(requireAuth);
 
-async function buildSessionResult(sessionId: number) {
-  const [session] = await db.select().from(examSessionsTable).where(eq(examSessionsTable.id, sessionId));
-  if (!session) return null;
-  const [exam] = await db.select().from(examsTable).where(eq(examsTable.id, session.examId));
+async function getOwnedSession(sessionId: number, userId: number, tenantId: number) {
+  const [owned] = await db.select({
+    session: examSessionsTable,
+    exam: examsTable,
+  }).from(examSessionsTable)
+    .innerJoin(examsTable, eq(examSessionsTable.examId, examsTable.id))
+    .where(and(
+      eq(examSessionsTable.id, sessionId),
+      eq(examSessionsTable.studentId, userId),
+      eq(examsTable.tenantId, tenantId),
+    ));
+  return owned ?? null;
+}
+
+async function buildSessionResult(sessionId: number, tenantId: number) {
+  const [owned] = await db.select({
+    session: examSessionsTable,
+    exam: examsTable,
+  }).from(examSessionsTable)
+    .innerJoin(examsTable, eq(examSessionsTable.examId, examsTable.id))
+    .where(and(eq(examSessionsTable.id, sessionId), eq(examsTable.tenantId, tenantId)));
+  if (!owned) return null;
+  const { session, exam } = owned;
   const questions = await db.select().from(questionsTable).where(eq(questionsTable.examId, session.examId)).orderBy(questionsTable.order);
   const qIds = questions.map(q => q.id);
   const options = qIds.length > 0
@@ -55,10 +74,12 @@ router.get("/student/exams", async (req, res) => {
   const allExams = await db.select().from(examsTable)
     .where(sql`tenant_id = ${tenant.id} AND (status = 'active' OR status = 'scheduled' OR status = 'closed')`);
   const myEnrollments = await db.select({ classId: classStudentsTable.classId })
-    .from(classStudentsTable).where(eq(classStudentsTable.studentId, user.id));
+    .from(classStudentsTable)
+    .innerJoin(classesTable, eq(classStudentsTable.classId, classesTable.id))
+    .where(and(eq(classStudentsTable.studentId, user.id), eq(classesTable.tenantId, tenant.id)));
   const enrolledClassIds = myEnrollments.map(e => e.classId);
   const accessible = allExams.filter(e =>
-    e.isPublic || (e.classId && enrolledClassIds.includes(e.classId))
+    e.classId ? enrolledClassIds.includes(e.classId) : Boolean(e.isPublic)
   );
   const mySessions = await db.select().from(examSessionsTable).where(eq(examSessionsTable.studentId, user.id));
   const sessionByExam = Object.fromEntries(mySessions.map(s => [s.examId, s]));
@@ -97,10 +118,14 @@ router.post("/student/exams/:examId/start", async (req, res) => {
   const [exam] = await db.select().from(examsTable).where(and(eq(examsTable.id, examId), eq(examsTable.tenantId, tenant.id)));
   if (!exam) { res.status(404).json({ error: "Not found" }); return; }
   const now = new Date();
-  const inWindow = exam.status === "active" ||
-    (exam.status === "scheduled" && !!exam.startsAt && exam.startsAt <= now && (!exam.endsAt || exam.endsAt >= now));
+  const inWindow = (exam.status === "active" || exam.status === "scheduled") &&
+    (!exam.startsAt || exam.startsAt <= now) &&
+    (!exam.endsAt || exam.endsAt >= now);
   if (!inWindow) { res.status(403).json({ error: "Esta prova não está disponível no momento" }); return; }
   if (exam.classId) {
+    const [ownedClass] = await db.select({ id: classesTable.id }).from(classesTable)
+      .where(and(eq(classesTable.id, exam.classId), eq(classesTable.tenantId, tenant.id)));
+    if (!ownedClass) { res.status(404).json({ error: "Not found" }); return; }
     const [enrollment] = await db.select({ id: classStudentsTable.id }).from(classStudentsTable)
       .where(and(eq(classStudentsTable.classId, exam.classId), eq(classStudentsTable.studentId, user.id)));
     if (!enrollment) { res.status(403).json({ error: "Você não está matriculado na turma desta prova" }); return; }
@@ -111,9 +136,13 @@ router.post("/student/exams/:examId/start", async (req, res) => {
     .where(and(eq(examSessionsTable.examId, examId), eq(examSessionsTable.studentId, user.id)));
   const inProgress = existing.find(s => s.status === "in_progress");
   if (inProgress) {
-    const examDetail = await buildSessionExamDetail(examId, inProgress);
-    res.json(examDetail);
-    return;
+    if (!inProgress.endsAt || inProgress.endsAt > now) {
+      const examDetail = await buildSessionExamDetail(examId, inProgress, tenant.id);
+      res.json(examDetail);
+      return;
+    }
+    await db.update(examSessionsTable).set({ status: "expired" })
+      .where(eq(examSessionsTable.id, inProgress.id));
   }
   if (exam.maxAttempts && existing.length >= exam.maxAttempts) {
     res.status(403).json({ error: "Limite de tentativas atingido" }); return;
@@ -122,12 +151,14 @@ router.post("/student/exams/:examId/start", async (req, res) => {
   const [session] = await db.insert(examSessionsTable).values({
     examId, studentId: user.id, endsAt, status: "in_progress",
   }).returning();
-  const examDetail = await buildSessionExamDetail(examId, session);
+  const examDetail = await buildSessionExamDetail(examId, session, tenant.id);
   res.json(examDetail);
 });
 
-async function buildSessionExamDetail(examId: number, session: any) {
-  const [exam] = await db.select().from(examsTable).where(eq(examsTable.id, examId));
+async function buildSessionExamDetail(examId: number, session: any, tenantId: number) {
+  const [exam] = await db.select().from(examsTable)
+    .where(and(eq(examsTable.id, examId), eq(examsTable.tenantId, tenantId)));
+  if (!exam) return null;
   const questions = await db.select().from(questionsTable).where(eq(questionsTable.examId, examId)).orderBy(questionsTable.order);
   const qIds = questions.map(q => q.id);
   const options = qIds.length > 0
@@ -141,12 +172,29 @@ async function buildSessionExamDetail(examId: number, session: any) {
     startedAt: session.startedAt.toISOString(), endsAt: session.endsAt?.toISOString() ?? null,
     status: session.status, answeredCount: answers.length,
     exam: {
-      ...exam, questionsCount: questions.length,
+      id: exam.id,
+      title: exam.title,
+      type: exam.type,
+      status: exam.status,
+      timeLimitMinutes: exam.timeLimitMinutes,
+      questionsCount: questions.length,
       createdAt: exam.createdAt.toISOString(), updatedAt: exam.updatedAt.toISOString(),
       startsAt: exam.startsAt?.toISOString() ?? null, endsAt: exam.endsAt?.toISOString() ?? null,
       questions: questions.map(q => ({
-        ...q, points: parseFloat(String(q.points)), createdAt: q.createdAt.toISOString(),
-        options: (optsByQ[q.id] ?? []).map((o: any) => ({ ...o, isCorrect: false })),
+        id: q.id,
+        examId: q.examId,
+        type: q.type,
+        statement: q.statement,
+        topicId: q.topicId,
+        points: parseFloat(String(q.points)),
+        order: q.order,
+        createdAt: q.createdAt.toISOString(),
+        options: (optsByQ[q.id] ?? []).map((o: any) => ({
+          id: o.id,
+          questionId: o.questionId,
+          text: o.text,
+          letter: o.letter,
+        })),
       })),
     },
   };
@@ -154,6 +202,7 @@ async function buildSessionExamDetail(examId: number, session: any) {
 
 router.post("/student/sessions/:sessionId/answer", async (req, res) => {
   const user = (req as any).user;
+  const tenant = (req as any).tenant;
   const sessionId = parseInt(String(req.params.sessionId));
   const parsed = z.object({
     questionId: z.coerce.number().int().positive(),
@@ -161,8 +210,8 @@ router.post("/student/sessions/:sessionId/answer", async (req, res) => {
   }).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: "Dados inválidos" }); return; }
   const { questionId, selectedOptionId } = parsed.data;
-  const [session] = await db.select().from(examSessionsTable)
-    .where(and(eq(examSessionsTable.id, sessionId), eq(examSessionsTable.studentId, user.id)));
+  const owned = await getOwnedSession(sessionId, user.id, tenant.id);
+  const session = owned?.session;
   if (!session || session.status !== "in_progress") { res.status(400).json({ error: "Session not active" }); return; }
   if (session.endsAt && session.endsAt <= new Date()) {
     await db.update(examSessionsTable).set({ status: "expired" }).where(eq(examSessionsTable.id, sessionId));
@@ -193,11 +242,11 @@ router.post("/student/sessions/:sessionId/submit", async (req, res) => {
   const user = (req as any).user;
   const tenant = (req as any).tenant;
   const sessionId = parseInt(String(req.params.sessionId));
-  const [session] = await db.select().from(examSessionsTable)
-    .where(and(eq(examSessionsTable.id, sessionId), eq(examSessionsTable.studentId, user.id)));
+  const owned = await getOwnedSession(sessionId, user.id, tenant.id);
+  const session = owned?.session;
   if (!session) { res.status(404).json({ error: "Not found" }); return; }
   if (session.status === "submitted") {
-    const result = await buildSessionResult(sessionId);
+    const result = await buildSessionResult(sessionId, tenant.id);
     res.json(result); return;
   }
   if (session.status === "expired") { res.status(400).json({ error: "Esta sessão expirou" }); return; }
@@ -217,17 +266,22 @@ router.post("/student/sessions/:sessionId/submit", async (req, res) => {
     tenantId: tenant.id, userId: user.id,
     type: "exam_submitted", description: `Prova submetida`,
   }).catch(() => {});
-  const result = await buildSessionResult(sessionId);
+  const result = await buildSessionResult(sessionId, tenant.id);
   res.json(result);
 });
 
 router.get("/student/sessions/:sessionId/result", async (req, res) => {
   const user = (req as any).user;
+  const tenant = (req as any).tenant;
   const sessionId = parseInt(String(req.params.sessionId));
-  const [session] = await db.select().from(examSessionsTable)
-    .where(and(eq(examSessionsTable.id, sessionId), eq(examSessionsTable.studentId, user.id)));
+  const owned = await getOwnedSession(sessionId, user.id, tenant.id);
+  const session = owned?.session;
   if (!session) { res.status(404).json({ error: "Not found" }); return; }
-  const result = await buildSessionResult(sessionId);
+  if (session.status !== "submitted") {
+    res.status(403).json({ error: "O resultado só está disponível após a finalização da prova" });
+    return;
+  }
+  const result = await buildSessionResult(sessionId, tenant.id);
   res.json(result);
 });
 

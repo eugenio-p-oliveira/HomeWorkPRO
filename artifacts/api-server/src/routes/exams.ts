@@ -42,7 +42,7 @@ async function getExamWithQuestions(examId: number) {
   };
 }
 
-router.get("/", async (req, res) => {
+router.get("/", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
   const { status, type, classId } = req.query as any;
   const conditions = [eq(examsTable.tenantId, tenant.id)];
@@ -124,7 +124,7 @@ router.post("/", requireRole("admin", "coordinator", "teacher"), async (req, res
   });
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
   const id = parseInt(String(req.params.id));
   const exam = await getExamWithQuestions(id);
@@ -186,9 +186,9 @@ router.post("/:id/publish", requireRole("admin", "coordinator", "teacher"), asyn
   });
 });
 
-router.get("/:id/report", async (req, res) => {
+router.get("/:id/report", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const [exam] = await db.select().from(examsTable).where(and(eq(examsTable.id, id), eq(examsTable.tenantId, tenant.id)));
   if (!exam) { res.status(404).json({ error: "Not found" }); return; }
   const sessions = await db.select().from(examSessionsTable).where(eq(examSessionsTable.examId, id));

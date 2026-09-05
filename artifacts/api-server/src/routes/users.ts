@@ -7,14 +7,13 @@ import { z } from "zod";
 
 const router = Router();
 router.use(requireAuth);
-router.use(requireRole("admin", "coordinator", "teacher"));
 
 function serializeUser(u: any) {
   const { passwordHash: _, ...safe } = u;
   return { ...safe, createdAt: safe.createdAt.toISOString(), updatedAt: safe.updatedAt.toISOString() };
 }
 
-router.get("/", async (req, res) => {
+router.get("/", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
   const { role, classId, search } = req.query as any;
   let query: any = db.select().from(usersTable).where(eq(usersTable.tenantId, tenant.id));
@@ -63,7 +62,7 @@ router.post("/", requireRole("admin", "coordinator"), async (req, res) => {
   res.status(201).json(serializeUser(user));
 });
 
-router.get("/:userId", async (req, res) => {
+router.get("/:userId", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
   const userId = parseInt(String(req.params.userId));
   const [user] = await db.select().from(usersTable)
@@ -125,8 +124,17 @@ router.delete("/:userId", requireRole("admin", "coordinator"), async (req, res) 
 
 router.get("/:userId/stats", async (req, res) => {
   const tenant = (req as any).tenant;
+  const user = (req as any).user;
   const userId = parseInt(req.params.userId);
   if (!Number.isInteger(userId)) { res.status(400).json({ error: "ID inválido" }); return; }
+  if (user.role === "student" && user.id !== userId) {
+    res.status(403).json({ error: "Você só pode acessar suas próprias estatísticas" });
+    return;
+  }
+  if (!["admin", "coordinator", "teacher", "student"].includes(user.role)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   const [student] = await db.select({ id: usersTable.id, role: usersTable.role }).from(usersTable)
     .where(and(eq(usersTable.id, userId), eq(usersTable.tenantId, tenant.id)));
   if (!student || student.role !== "student") { res.status(404).json({ error: "Aluno não encontrado" }); return; }
@@ -156,7 +164,8 @@ router.get("/:userId/stats", async (req, res) => {
   }
   const subIds = Object.keys(subjectScores).map(Number);
   if (subIds.length > 0) {
-    const subs = await db.select().from(subjectsTable).where(inArray(subjectsTable.id, subIds));
+    const subs = await db.select().from(subjectsTable)
+      .where(and(inArray(subjectsTable.id, subIds), eq(subjectsTable.tenantId, tenant.id)));
     subs.forEach(s => { if (subjectScores[s.id]) { subjectScores[s.id].name = s.name; subjectScores[s.id].color = s.color ?? null; } });
   }
   const bySubject = Object.entries(subjectScores).map(([subId, data]) => ({

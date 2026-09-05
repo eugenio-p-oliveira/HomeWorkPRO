@@ -11,7 +11,7 @@ const router = Router();
 router.use(requireAuth);
 
 // SUBJECTS
-router.get("/subjects", async (req, res) => {
+router.get("/subjects", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
   const subjects = await db.select().from(subjectsTable).where(eq(subjectsTable.tenantId, tenant.id));
   const topicCounts = await db.select({ subjectId: topicsTable.subjectId, cnt: count() })
@@ -51,7 +51,7 @@ router.delete("/subjects/:id", requireRole("admin", "coordinator"), async (req, 
 });
 
 // TOPICS
-router.get("/topics", async (req, res) => {
+router.get("/topics", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
   const subjectId = req.query.subjectId ? parseInt(req.query.subjectId as string) : undefined;
   let topics;
@@ -109,7 +109,7 @@ router.delete("/topics/:id", requireRole("admin", "coordinator"), async (req, re
 });
 
 // SERIES
-router.get("/series", async (req, res) => {
+router.get("/series", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
   const series = await db.select().from(seriesTable).where(eq(seriesTable.tenantId, tenant.id));
   res.json(series.map(s => ({ ...s, createdAt: s.createdAt.toISOString() })));
@@ -125,7 +125,7 @@ router.post("/series", requireRole("admin", "coordinator"), async (req, res) => 
 });
 
 // CLASSES
-router.get("/classes", async (req, res) => {
+router.get("/classes", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
   const serieId = req.query.serieId ? parseInt(req.query.serieId as string) : undefined;
   let classes;
@@ -155,7 +155,7 @@ router.post("/classes", requireRole("admin", "coordinator"), async (req, res) =>
   res.status(201).json({ ...c, studentsCount: 0, createdAt: c.createdAt.toISOString() });
 });
 
-router.get("/classes/:id", async (req, res) => {
+router.get("/classes/:id", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
   const id = parseInt(String(req.params.id));
   const [cls] = await db.select().from(classesTable).where(and(eq(classesTable.id, id), eq(classesTable.tenantId, tenant.id)));
@@ -218,9 +218,12 @@ router.post("/classes/:id/students", requireRole("admin", "coordinator"), async 
   res.json({ success: true });
 });
 
-router.get("/classes/:id/stats", async (req, res) => {
+router.get("/classes/:id/stats", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const tenant = (req as any).tenant;
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
+  const [ownedClass] = await db.select({ id: classesTable.id }).from(classesTable)
+    .where(and(eq(classesTable.id, id), eq(classesTable.tenantId, tenant.id)));
+  if (!ownedClass) { res.status(404).json({ error: "Turma não encontrada" }); return; }
   const enrollments = await db.select({ studentId: classStudentsTable.studentId }).from(classStudentsTable).where(eq(classStudentsTable.classId, id));
   const studentIds = enrollments.map(e => e.studentId);
   if (studentIds.length === 0) {
@@ -239,7 +242,8 @@ router.get("/classes/:id/stats", async (req, res) => {
     if (!studentScores[sid]) studentScores[sid] = [];
     if (s.exam_sessions.score) studentScores[sid].push(parseFloat(String(s.exam_sessions.score)));
   });
-  const studentData = await db.select().from(usersTable).where(inArray(usersTable.id, studentIds));
+  const studentData = await db.select().from(usersTable)
+    .where(and(inArray(usersTable.id, studentIds), eq(usersTable.tenantId, tenant.id)));
   const ranking = studentData.map(u => {
     const sc = studentScores[u.id] ?? [];
     const avg = sc.length ? sc.reduce((a, b) => a + b, 0) / sc.length : 0;

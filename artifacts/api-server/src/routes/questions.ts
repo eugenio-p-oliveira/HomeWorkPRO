@@ -12,7 +12,7 @@ function getExamId(req: any) {
 }
 
 // GET /api/exams/:examId/questions
-router.get("/", async (req, res) => {
+router.get("/", requireRole("admin", "coordinator", "teacher"), async (req, res) => {
   const examId = getExamId(req);
   const tenant = (req as any).tenant;
   const [exam] = await db.select().from(examsTable).where(and(eq(examsTable.id, examId), eq(examsTable.tenantId, tenant.id)));

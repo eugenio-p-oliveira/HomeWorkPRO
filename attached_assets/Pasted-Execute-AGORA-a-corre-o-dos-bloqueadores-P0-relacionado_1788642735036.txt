@@ -1,0 +1,532 @@
+Execute AGORA a correção dos bloqueadores P0 relacionados à autorização do ALUNO e à segurança do fluxo de PROVAS.
+
+Não pare apenas na análise.
+
+Você deve:
+
+1. analisar;
+2. corrigir;
+3. testar;
+4. validar;
+5. reportar o resultado.
+
+Trabalhe EXCLUSIVAMENTE neste pacote de segurança.
+
+# OBJETIVO
+
+Eliminar imediatamente os seguintes bloqueadores de produção:
+
+* aluno acessa relatórios institucionais;
+* aluno acessa provas diretamente fora do fluxo correto;
+* aluno acessa questões diretamente;
+* payload de questões expõe `isCorrect` ou qualquer equivalente ao gabarito;
+* endpoints de leitura de prova não aplicam as mesmas regras do fluxo de início da prova;
+* aluno não consegue acessar corretamente as próprias estatísticas;
+* possibilidade de acessar dados de outro aluno, turma, prova, sessão ou tenant manipulando IDs.
+
+Ao final desta execução, o backend deve aplicar corretamente:
+
+AUTENTICAÇÃO + PAPEL + TENANT + PROPRIEDADE/ESCOPO + ESTADO DA PROVA + SESSÃO
+
+---
+
+# 1. BLOQUEAR RELATÓRIOS PARA ALUNOS
+
+Revise todos os endpoints de relatórios e estatísticas institucionais.
+
+Inclua no mínimo:
+
+* `GET /api/tenants/stats`
+* `GET /api/reports/overview`
+* `GET /api/reports/class-detail/:classId`
+* `GET /api/reports/student-timeline/:studentId`
+* `GET /api/reports/class-ranking`
+
+e qualquer outro endpoint equivalente encontrado no backend.
+
+REGRA:
+
+Usuário com papel `student` NÃO pode acessar relatórios administrativos ou institucionais.
+
+Não basta esconder menus no frontend.
+
+A restrição deve existir no backend.
+
+Se houver endpoints compartilhados entre papéis, aplique autorização explícita por role.
+
+---
+
+# 2. CORRIGIR ACESSO ÀS PRÓPRIAS ESTATÍSTICAS
+
+O aluno atualmente recebe `403` ao tentar consultar as próprias estatísticas através de:
+
+`GET /api/users/:id/stats`
+
+Corrija esse comportamento.
+
+REGRA:
+
+Aluno pode acessar SOMENTE as próprias estatísticas.
+
+Deve funcionar quando:
+
+`requestedUserId === authenticatedUser.id`
+
+Deve bloquear quando:
+
+`requestedUserId !== authenticatedUser.id`
+
+Administradores e demais perfis autorizados podem manter os acessos compatíveis com suas regras existentes.
+
+Se for tecnicamente mais seguro manter a rota atual, mantenha.
+
+Não crie uma nova rota `/api/me/stats` apenas por preferência arquitetural.
+
+Faça a menor alteração robusta possível.
+
+---
+
+# 3. BLOQUEAR ACESSO ADMINISTRATIVO À PROVA PELO ALUNO
+
+Revise:
+
+`GET /api/exams/:id`
+
+Aluno não deve receber a representação administrativa/interna da prova.
+
+REGRA:
+
+Um aluno só pode acessar uma prova dentro do fluxo acadêmico autorizado.
+
+Valide obrigatoriamente:
+
+* usuário autenticado;
+* role;
+* tenant;
+* matrícula;
+* turma;
+* publicação;
+* disponibilidade;
+* período permitido;
+* tentativas;
+* estado da prova.
+
+Se esse endpoint for administrativo, bloqueie `student`.
+
+Se existir um endpoint específico para o fluxo do aluno, utilize esse fluxo.
+
+Não permita que o aluno contorne o início da prova consultando o endpoint diretamente.
+
+---
+
+# 4. BLOQUEAR ACESSO DIRETO ÀS QUESTÕES
+
+Revise:
+
+`GET /api/exams/:id/questions`
+
+Aluno não pode usar endpoint administrativo/genérico para obter questões.
+
+REGRA:
+
+Questões de uma prova devem ser entregues ao aluno somente através do fluxo correto de sessão.
+
+Antes de retornar questões para aluno, valide:
+
+* sessão válida;
+* sessão pertence ao aluno autenticado;
+* sessão pertence ao tenant autenticado;
+* prova corresponde à sessão;
+* aluno está matriculado corretamente;
+* prova está disponível;
+* tentativa é válida;
+* sessão ainda pode receber respostas.
+
+Não confie em `examId`, `studentId` ou `sessionId` fornecidos pelo cliente sem validar propriedade.
+
+---
+
+# 5. REMOVER COMPLETAMENTE O GABARITO DO PAYLOAD DO ALUNO
+
+Este item é CRÍTICO.
+
+O payload destinado ao aluno NÃO pode conter:
+
+* `isCorrect`;
+* `correctAnswer`;
+* `answerKey`;
+* `solution`;
+* `expectedAnswer`;
+* indicadores equivalentes;
+* campos administrativos que revelem a resposta correta;
+* qualquer informação que permita inferir diretamente o gabarito.
+
+Revise:
+
+* prova;
+* questões;
+* alternativas;
+* sessão;
+* respostas;
+* resultados antes da finalização.
+
+Crie ou utilize uma representação segura para o aluno.
+
+Não retorne o objeto interno do banco diretamente se ele contiver campos sensíveis.
+
+Se necessário, sanitize explicitamente o response.
+
+IMPORTANTE:
+
+Não basta remover `isCorrect` no frontend.
+
+A informação NÃO pode sair do backend.
+
+---
+
+# 6. VALIDAR SESSÃO DA PROVA
+
+Mapeie e corrija o fluxo:
+
+LOGIN
+
+→ PROVAS DISPONÍVEIS
+
+→ ESCOLHA DA PROVA
+
+→ VALIDAÇÕES
+
+→ CRIAÇÃO OU RECUPERAÇÃO DA SESSÃO
+
+→ CARREGAMENTO DAS QUESTÕES
+
+→ ENVIO DAS RESPOSTAS
+
+→ FINALIZAÇÃO
+
+→ CORREÇÃO
+
+→ RESULTADO
+
+Garanta que um aluno NÃO consiga:
+
+* pular a criação da sessão;
+* informar `sessionId` de outro aluno;
+* informar `examId` de outra prova;
+* acessar sessão de outro tenant;
+* continuar enviando respostas para sessão finalizada;
+* acessar questões de prova não permitida;
+* acessar questões fora do período;
+* iniciar tentativa além do limite permitido.
+
+---
+
+# 7. VALIDAR ISOLAMENTO MULTI-TENANT
+
+Toda consulta sensível deve validar o tenant.
+
+A lógica deve ser equivalente a:
+
+`resource.tenantId === authenticatedUser.tenantId`
+
+Valide isso em:
+
+* usuários;
+* alunos;
+* provas;
+* questões;
+* turmas;
+* matrículas;
+* sessões;
+* respostas;
+* resultados;
+* relatórios.
+
+Não aceite apenas que a entidade principal esteja no tenant correto.
+
+Valide também relações indiretas quando necessário.
+
+Exemplo:
+
+sessão → aluno → turma → prova
+
+não deve conseguir cruzar tenants através de IDs inconsistentes.
+
+---
+
+# 8. REVISAR TODAS AS ROTAS RELACIONADAS
+
+Durante a implementação, revise as rotas relacionadas a:
+
+* `/api/reports`
+* `/api/exams`
+* `/api/questions`
+* `/api/sessions`
+* `/api/answers`
+* `/api/results`
+* `/api/users`
+* `/api/classes`
+* `/api/subjects`
+* `/api/tenants`
+
+Procure endpoints protegidos apenas por `requireAuth`.
+
+Para cada rota sensível, verifique se também existe autorização apropriada por:
+
+* role;
+* tenant;
+* propriedade;
+* contexto.
+
+Se encontrar uma vulnerabilidade equivalente diretamente relacionada a este pacote P0, CORRIJA.
+
+Não deixe outra rota equivalente aberta apenas porque ela não foi citada nominalmente.
+
+---
+
+# 9. NÃO QUEBRAR PROFESSOR E ADMINISTRADOR
+
+Preserve os acessos legítimos existentes.
+
+## ADMINISTRADOR
+
+Deve continuar podendo:
+
+* administrar usuários;
+* acessar relatórios institucionais;
+* administrar provas;
+* administrar questões;
+* visualizar dados acadêmicos permitidos.
+
+## PROFESSOR
+
+Deve continuar podendo acessar os recursos acadêmicos que já fazem parte do escopo autorizado do professor.
+
+Não amplie permissões do professor nesta etapa.
+
+Não implemente ainda a criação de turmas pelo professor.
+
+Não corrija outros problemas P1.
+
+Apenas evite regressão.
+
+---
+
+# 10. FRONTEND
+
+Depois de corrigir o backend, ajuste o frontend SOMENTE onde necessário para compatibilidade.
+
+Exemplos permitidos:
+
+* dashboard do aluno voltar a carregar estatísticas;
+* fluxo de prova consumir o endpoint seguro;
+* remoção de dependência de campos proibidos no payload;
+* tratamento correto de `403`;
+* remoção de chamadas que não deveriam mais existir.
+
+Não faça redesign.
+
+Não altere layout sem necessidade.
+
+Não crie funcionalidades novas.
+
+---
+
+# 11. TESTES OBRIGATÓRIOS
+
+Depois da implementação, execute testes reais ou equivalentes verificáveis.
+
+## ALUNO
+
+Teste:
+
+1. login de aluno → sucesso;
+2. próprias estatísticas → `200`;
+3. estatísticas de outro aluno → `403` ou `404` seguro;
+4. `/api/tenants/stats` → bloqueado;
+5. `/api/reports/overview` → bloqueado;
+6. relatórios de turma → bloqueados quando administrativos;
+7. listagem administrativa de usuários → bloqueada;
+8. prova não vinculada → bloqueada;
+9. prova de outra turma → bloqueada;
+10. prova de outro tenant → bloqueada;
+11. questões via endpoint administrativo → bloqueadas;
+12. questões sem sessão válida → bloqueadas;
+13. questões com sessão válida → permitidas;
+14. sessão de outro aluno → bloqueada;
+15. sessão de outro tenant → bloqueada;
+16. payload da prova → sem `isCorrect`;
+17. payload das questões → sem gabarito;
+18. payload das alternativas → sem indicador de correção;
+19. envio de resposta para sessão própria válida → funciona;
+20. envio de resposta para sessão alheia → bloqueado;
+21. envio após finalização da sessão → bloqueado, se essa for a regra existente;
+22. resultado próprio → funciona.
+
+## PROFESSOR
+
+Teste:
+
+* login;
+* provas;
+* questões;
+* relatórios permitidos;
+* turmas permitidas.
+
+Confirme que não houve regressão.
+
+## ADMINISTRADOR
+
+Teste:
+
+* login;
+* usuários;
+* provas;
+* questões;
+* relatórios;
+* configurações acadêmicas relevantes.
+
+Confirme que não houve regressão.
+
+---
+
+# 12. TESTES DE MANIPULAÇÃO DE ID
+
+Teste explicitamente troca manual de:
+
+* `userId`;
+* `studentId`;
+* `classId`;
+* `examId`;
+* `questionId`;
+* `sessionId`;
+* `tenantId`.
+
+Nenhuma troca arbitrária pode conceder acesso indevido.
+
+---
+
+# 13. TESTES DE PAYLOAD
+
+Inspecione os JSON retornados ao aluno.
+
+Procure especificamente por:
+
+* `isCorrect`;
+* `correct`;
+* `answer`;
+* `correctAnswer`;
+* `solution`;
+* `expected`;
+* `score`;
+* campos internos;
+* objetos administrativos completos.
+
+Se qualquer campo revelar gabarito ou informação indevida antes do momento correto, remova do response destinado ao aluno.
+
+---
+
+# 14. RESTRIÇÕES DE ESCOPO
+
+NÃO implemente nesta etapa:
+
+* billing;
+* checkout;
+* Stripe;
+* recuperação de senha;
+* MFA;
+* mensagens responsável → escola;
+* notificações;
+* e-mail transacional;
+* criação de turma pelo professor;
+* aprovação de turma;
+* backup;
+* troca de banco;
+* alteração comercial;
+* redesign;
+* nova landing page;
+* funcionalidades futuras.
+
+Não faça refatoração geral.
+
+Não "aproveite" para modernizar módulos.
+
+Faça apenas o necessário para eliminar este pacote P0.
+
+---
+
+# 15. CRITÉRIO DE CONCLUSÃO
+
+NÃO considere a tarefa concluída apenas porque o código foi alterado.
+
+A tarefa só está concluída se:
+
+* aluno não acessa relatórios institucionais;
+* aluno não acessa dados de outro aluno;
+* aluno não acessa prova fora de seu escopo;
+* aluno não acessa questões sem fluxo autorizado;
+* gabarito não é enviado ao aluno;
+* sessões são validadas por usuário e tenant;
+* estatísticas próprias funcionam;
+* professor continua funcionando;
+* administrador continua funcionando;
+* frontend continua operando;
+* testes executados confirmam os comportamentos.
+
+---
+
+# 16. RELATÓRIO FINAL OBRIGATÓRIO
+
+Depois de implementar e testar, apresente um relatório curto e objetivo com:
+
+## ALTERAÇÕES REALIZADAS
+
+Liste os arquivos alterados e o motivo.
+
+## VULNERABILIDADES CORRIGIDAS
+
+Informe cada problema eliminado.
+
+## ENDPOINTS ALTERADOS
+
+Liste os endpoints e a nova regra de autorização.
+
+## TESTES EXECUTADOS
+
+Use tabela:
+
+TESTE | RESULTADO
+
+com:
+
+✅ PASSOU
+❌ FALHOU
+⚠️ PARCIAL
+
+## REGRESSÕES
+
+Informe se algo deixou de funcionar.
+
+## PENDÊNCIAS
+
+Liste apenas problemas encontrados durante esta etapa que permaneceram fora do escopo.
+
+## STATUS FINAL
+
+Responda:
+
+P0 DE AUTORIZAÇÃO DO ALUNO: RESOLVIDO / PARCIAL / NÃO RESOLVIDO
+
+SEGURANÇA DO FLUXO DE PROVA: RESOLVIDA / PARCIAL / NÃO RESOLVIDA
+
+GABARITO NÃO É MAIS EXPOSTO: CONFIRMADO / NÃO CONFIRMADO
+
+ISOLAMENTO MULTI-TENANT TESTADO NESTE FLUXO: SIM / PARCIAL / NÃO
+
+REGRESSÕES ENCONTRADAS: SIM / NÃO
+
+PRÓXIMO BLOQUEADOR RECOMENDADO:
+
+Não encerre com frases genéricas como "tudo corrigido".
+
+Informe evidências concretas do que foi testado.

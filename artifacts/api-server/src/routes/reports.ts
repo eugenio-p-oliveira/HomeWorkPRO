@@ -5,10 +5,11 @@ import {
   seriesTable, topicsTable
 } from "@workspace/db";
 import { eq, sql, and, inArray } from "@workspace/db";
-import { requireAuth } from "../lib/auth";
+import { requireAuth, requireRole } from "../lib/auth";
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireRole("admin", "coordinator", "teacher"));
 
 // ===== Helper functions =====
 
