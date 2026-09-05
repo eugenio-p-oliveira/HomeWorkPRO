@@ -1,0 +1,71 @@
+Vamos iniciar as correções com controle rigoroso de escopo.
+
+Nesta etapa, trabalhe EXCLUSIVAMENTE no ERR-001 identificado na auditoria:
+
+"Ver como Cliente" trava o administrador fora do painel.
+
+Antes de implementar:
+
+1. Reanalise o fluxo completo relacionado ao ERR-001.
+2. Confirme a causa raiz.
+3. Identifique exatamente quais arquivos precisam ser modificados.
+4. Identifique quais arquivos NÃO precisam ser modificados.
+5. Descreva a solução mínima necessária.
+6. Verifique se a solução pode afetar autenticação, tenant atual, rotas `/app`, rota pública `/b/:slug`, localStorage ou troca de visualização.
+7. Defina critérios objetivos de aceite.
+
+A solução deverá garantir, no mínimo:
+
+* o administrador continua autenticado;
+* "Ver como Cliente" permite visualizar a experiência pública da barbearia;
+* visualizar como cliente não pode bloquear o acesso posterior ao `/app`;
+* deve existir um caminho confiável para retornar ao modo administrativo;
+* atualizar a página não pode deixar o administrador preso no modo cliente;
+* fechar e abrir novamente o sistema não pode impedir acesso ao painel;
+* nenhuma informação do tenant atual pode ser perdida;
+* nenhuma permissão real do usuário deve ser modificada;
+* o recurso de demonstração não pode alterar dados ou papéis do usuário.
+
+RESTRIÇÕES:
+
+Não corrija nenhum outro ERR nesta etapa.
+
+Não aproveite esta alteração para corrigir ERR-010, ERR-011, ERR-012 ou qualquer outro problema encontrado na auditoria.
+
+Não faça refatorações gerais.
+
+Não altere banco de dados.
+
+Não altere RLS.
+
+Não altere regras de negócio não relacionadas.
+
+Não altere layout além do estritamente necessário para permitir sair do modo de visualização, caso isso seja necessário.
+
+Não crie novas funcionalidades.
+
+Não modifique arquivos sem relação direta com o ERR-001.
+
+IMPORTANTE:
+
+Ainda NÃO implemente a correção.
+
+Primeiro apresente:
+
+CAUSA RAIZ
+
+ARQUIVOS AFETADOS
+
+SOLUÇÃO PROPOSTA
+
+ALTERAÇÕES EXATAS QUE SERÃO REALIZADAS
+
+POSSÍVEIS EFEITOS COLATERAIS
+
+CRITÉRIOS DE ACEITE
+
+TESTES QUE DEVERÃO SER EXECUTADOS APÓS A IMPLEMENTAÇÃO
+
+Depois PARE e aguarde minha autorização.
+
+Não escreva nem altere código antes da autorização.
