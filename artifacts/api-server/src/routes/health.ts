@@ -1,10 +1,14 @@
 import { Router, type IRouter } from "express";
 import { HealthCheckResponse } from "@workspace/api-zod";
+import { getDatabaseBackupHealth } from "../lib/database-backup";
 
 const router: IRouter = Router();
 
 router.get("/healthz", (_req, res) => {
-  const data = HealthCheckResponse.parse({ status: "ok" });
+  const backupHealth = getDatabaseBackupHealth();
+  const data = HealthCheckResponse.parse({
+    status: backupHealth.healthy ? "ok" : "degraded",
+  });
   res.json(data);
 });
 

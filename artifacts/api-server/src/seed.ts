@@ -209,6 +209,10 @@ async function ensureDemoGuardian() {
 }
 
 export async function autoSeedIfEmpty() {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Demo auto-seeding is disabled in production.");
+  }
+
   const [anyTenant] = await db.select({ id: tenantsTable.id }).from(tenantsTable).limit(1);
   if (!anyTenant) {
     console.log("[auto-seed] Database empty -- seeding demo data...");

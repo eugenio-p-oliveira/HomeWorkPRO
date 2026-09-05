@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { autoSeedIfEmpty } from "./seed";
+import { startDatabaseBackupScheduler } from "./lib/database-backup";
 
 const rawPort = process.env["PORT"];
 
@@ -17,10 +18,16 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 async function start() {
-  try {
-    await autoSeedIfEmpty();
-  } catch (err) {
-    logger.error({ err }, "Auto-seed failed, continuing startup");
+  if (process.env.NODE_ENV === "production") {
+    // A production process is not allowed to start until a verified backup
+    // exists. This makes backup failures visible to deployment monitoring.
+    await startDatabaseBackupScheduler();
+  } else {
+    try {
+      await autoSeedIfEmpty();
+    } catch (err) {
+      logger.error({ err }, "Auto-seed failed, continuing startup");
+    }
   }
 
   app.listen(port, (err) => {
@@ -33,4 +40,7 @@ async function start() {
   });
 }
 
-start();
+start().catch((err) => {
+  logger.fatal({ err }, "Production startup checks failed");
+  process.exit(1);
+});
