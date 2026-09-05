@@ -3,3 +3,4 @@
 - [Variáveis Vite no deploy](vite-env.md) — valores não configurados podem chegar como a string literal `"undefined"`; normalize antes de montar URLs.
 - [Sincronização Vercel](vercel-sync.md) — se o bundle público não muda após push no `main`, verificar repositório/branch do projeto Vercel antes de investigar o código.
 - [Cobrança comercial](commercial-billing.md) — sem provedor escolhido, planos devem encaminhar para vendas e não simular checkout, assinatura ou cancelamento automático.
+- [Auditoria pré-produção](pre-production-audit.md) — disponibilidade e typecheck não substituem testes de autorização por papel, tenant e payload em runtime.

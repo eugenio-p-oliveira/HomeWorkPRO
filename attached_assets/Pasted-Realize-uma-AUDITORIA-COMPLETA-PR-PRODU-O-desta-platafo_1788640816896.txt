@@ -1,0 +1,1017 @@
+Realize uma AUDITORIA COMPLETA PRÉ-PRODUÇÃO desta plataforma SaaS.
+
+Seu objetivo nesta etapa NÃO é corrigir o sistema.
+
+Seu objetivo é testar, inspecionar, validar e documentar tudo o que for possível para determinar:
+
+* o que funciona corretamente;
+* o que funciona parcialmente;
+* o que está quebrado;
+* o que apresenta risco;
+* o que está incompleto;
+* o que está implementado apenas visualmente, mas não funciona de ponta a ponta;
+* o que ainda falta para que o sistema possa ser disponibilizado para clientes reais em produção.
+
+## REGRA PRINCIPAL
+
+NÃO altere código.
+NÃO faça refatorações.
+NÃO crie migrations.
+NÃO altere banco de dados.
+NÃO altere policies.
+NÃO implemente funcionalidades.
+NÃO faça correções automáticas.
+NÃO esconda problemas encontrados.
+
+Nesta etapa, somente ANALISE, TESTE e DOCUMENTE.
+
+---
+
+# 1. PERSPECTIVAS OBRIGATÓRIAS
+
+Faça a auditoria simultaneamente sob quatro perspectivas.
+
+## A. COMO CLIENTE FINAL
+
+Use o sistema como um cliente real usaria.
+
+Avalie:
+
+* clareza do fluxo;
+* facilidade de cadastro;
+* login;
+* recuperação de acesso;
+* navegação;
+* entendimento das funcionalidades;
+* formulários;
+* mensagens de erro;
+* mensagens de sucesso;
+* estados vazios;
+* carregamentos;
+* comportamento em atualizações de página;
+* comportamento após logout/login;
+* persistência das informações;
+* funcionamento em diferentes fluxos;
+* links;
+* botões;
+* menus;
+* redirecionamentos;
+* inconsistências visuais que prejudiquem o uso;
+* funcionalidades que parecem existir, mas não funcionam;
+* etapas que deixam o usuário sem saber o que fazer;
+* ações perigosas sem confirmação;
+* erros técnicos expostos ao usuário.
+
+Identifique qualquer situação em que um cliente real poderia:
+
+* ficar preso;
+* perder dados;
+* não entender o que aconteceu;
+* executar uma ação incorreta;
+* acessar algo que não deveria;
+* acreditar que algo foi salvo sem ter sido;
+* pagar ou contratar algo incorretamente;
+* abandonar o sistema.
+
+---
+
+## B. COMO PROFISSIONAL DE DESENVOLVIMENTO
+
+Analise tecnicamente a aplicação inteira.
+
+Verifique:
+
+* arquitetura geral;
+* organização de componentes;
+* serviços;
+* hooks;
+* contexts;
+* gerenciamento de estado;
+* comunicação front-end/backend;
+* banco de dados;
+* funções server-side;
+* APIs;
+* edge functions;
+* RPCs;
+* endpoints;
+* rotas;
+* middleware;
+* autenticação;
+* autorização;
+* controle de tenant;
+* persistência;
+* cache;
+* localStorage/sessionStorage;
+* concorrência;
+* race conditions;
+* tratamento de erros;
+* consistência de tipos;
+* validações;
+* código duplicado;
+* código morto;
+* funções órfãs;
+* tabelas sem uso;
+* endpoints sem consumidores;
+* páginas sem integração;
+* funcionalidades parcialmente implementadas;
+* fluxos duplicados com regras diferentes.
+
+Procure especialmente diferenças entre:
+
+FRONT-END → BACK-END → BANCO DE DADOS → REGRA DE NEGÓCIO.
+
+Não considere uma funcionalidade funcionando apenas porque a interface existe.
+
+Valide o fluxo completo.
+
+---
+
+# 2. INVENTÁRIO COMPLETO DE FUNCIONALIDADES
+
+Antes dos testes, faça um inventário das funcionalidades existentes.
+
+Mapeie:
+
+* páginas;
+* módulos;
+* menus;
+* submenus;
+* rotas públicas;
+* rotas privadas;
+* dashboards;
+* cadastros;
+* CRUDs;
+* configurações;
+* relatórios;
+* integrações;
+* planos;
+* assinaturas;
+* pagamentos;
+* notificações;
+* agendamentos;
+* usuários;
+* perfis;
+* permissões;
+* funções administrativas;
+* funções do cliente;
+* funções de profissionais;
+* funções de suporte;
+* funcionalidades existentes no banco, mas não conectadas ao front-end.
+
+Para cada funcionalidade encontrada, classifique posteriormente como:
+
+FUNCIONANDO
+
+FUNCIONANDO PARCIALMENTE
+
+NÃO FUNCIONANDO
+
+NÃO TESTÁVEL
+
+INCOMPLETA
+
+CÓDIGO MORTO / NÃO CONECTADO
+
+---
+
+# 3. TESTE DE ROTAS E NAVEGAÇÃO
+
+Teste todas as rotas encontradas.
+
+Para cada rota, verifique:
+
+* acesso direto pela URL;
+* navegação interna;
+* refresh da página;
+* back/forward do navegador;
+* parâmetros;
+* query strings;
+* slugs;
+* IDs;
+* rotas inexistentes;
+* redirecionamentos;
+* rotas autenticadas;
+* rotas públicas;
+* isolamento por tenant;
+* acesso após logout;
+* acesso com perfil incorreto;
+* acesso digitando a URL manualmente.
+
+Procure:
+
+* loops de redirect;
+* redirect incorreto;
+* rota que perde parâmetros;
+* tenant incorreto;
+* estado perdido;
+* tela vazia;
+* acesso indevido;
+* erro 404 incorreto;
+* dependência excessiva de localStorage.
+
+---
+
+# 4. TESTE DE LINKS, BOTÕES E AÇÕES
+
+Inspecione e teste todos os elementos acionáveis possíveis:
+
+* botões;
+* links;
+* cards clicáveis;
+* menus;
+* dropdowns;
+* modais;
+* formulários;
+* toggles;
+* tabs;
+* drag and drop;
+* ações de editar;
+* criar;
+* excluir;
+* cancelar;
+* duplicar;
+* salvar;
+* enviar;
+* confirmar;
+* voltar;
+* finalizar;
+* contratar;
+* alterar plano.
+
+Informe qualquer elemento que:
+
+* não faz nada;
+* chama rota errada;
+* dispara ação errada;
+* não apresenta feedback;
+* apresenta sucesso falso;
+* executa duas vezes;
+* permite clique repetido;
+* aceita ação indevida.
+
+---
+
+# 5. TESTE DE PERSISTÊNCIA E BANCO DE DADOS
+
+Valide a persistência de ponta a ponta.
+
+Para cada operação relevante, verifique:
+
+CREATE
+
+READ
+
+UPDATE
+
+DELETE
+
+Confirme:
+
+* dado salvo corretamente;
+* dado recuperado corretamente;
+* dado permanece após refresh;
+* dado permanece após logout/login;
+* dado aparece para o tenant correto;
+* dado não aparece para outro tenant;
+* update realmente atualiza;
+* delete realmente remove ou arquiva;
+* registros relacionados permanecem consistentes.
+
+Procure:
+
+* dados órfãos;
+* duplicação;
+* inconsistências;
+* relacionamento quebrado;
+* informação salva apenas no front-end;
+* fallback mascarando dado ausente;
+* dados divergentes entre tabelas;
+* duas fontes de verdade para a mesma regra.
+
+---
+
+# 6. TESTE DE REGRAS DE NEGÓCIO
+
+Identifique todas as regras de negócio existentes no código e no banco.
+
+Teste se elas são realmente aplicadas.
+
+Inclua, quando existirem:
+
+* limites de planos;
+* status;
+* vencimentos;
+* disponibilidade;
+* horários;
+* conflitos;
+* datas;
+* permissões;
+* cancelamentos;
+* regras de cadastro;
+* regras financeiras;
+* limites de uso;
+* regras por perfil;
+* regras por tenant;
+* estados permitidos;
+* transições de estado.
+
+Para cada regra:
+
+REGRA EXISTENTE
+
+ONDE É APLICADA
+
+ONDE NÃO É APLICADA
+
+SE É VALIDADA NO FRONT
+
+SE É VALIDADA NO BACKEND
+
+SE PODE SER CONTORNADA
+
+---
+
+# 7. TESTE DE ENDPOINTS, RPCs, EDGE FUNCTIONS E APIs
+
+Faça um inventário de todos os endpoints/funções disponíveis.
+
+Para cada um, verifique:
+
+* finalidade;
+* consumidor;
+* autenticação exigida;
+* autorização;
+* validação de entrada;
+* validação de tenant;
+* validação de proprietário;
+* tratamento de erros;
+* retorno;
+* exposição de dados;
+* métodos permitidos;
+* parâmetros;
+* comportamento com dados inválidos;
+* comportamento sem autenticação;
+* comportamento com usuário autenticado sem permissão;
+* idempotência quando necessária;
+* possibilidade de abuso.
+
+Identifique:
+
+* endpoints públicos desnecessários;
+* endpoints sem rate limiting;
+* funções sem validação;
+* RPCs não utilizadas;
+* funções órfãs;
+* endpoints que confiam excessivamente no front-end.
+
+---
+
+# 8. TESTE DE AUTENTICAÇÃO
+
+Verifique:
+
+* cadastro;
+* login;
+* logout;
+* sessão;
+* expiração;
+* recuperação de senha;
+* alteração de senha;
+* confirmação de e-mail;
+* autenticação social, caso exista;
+* persistência da sessão;
+* múltiplas abas;
+* múltiplos dispositivos;
+* usuário desativado;
+* usuário excluído;
+* usuário sem tenant;
+* usuário com vários tenants.
+
+Procure:
+
+* sessão inconsistente;
+* acesso após logout;
+* dependência insegura de estado local;
+* usuário caindo no tenant errado;
+* login que depende de configuração externa não garantida.
+
+---
+
+# 9. TESTE DE AUTORIZAÇÃO E PERMISSÕES
+
+Teste cada perfil existente.
+
+Exemplos:
+
+* administrador;
+* proprietário;
+* gerente;
+* profissional;
+* cliente;
+* usuário comum;
+* suporte.
+
+Para cada perfil, tente acessar:
+
+* menus não autorizados;
+* rotas manualmente;
+* endpoints diretamente;
+* dados de outros usuários;
+* dados de outros tenants;
+* funções administrativas;
+* alterações de perfil;
+* configurações;
+* financeiro;
+* billing;
+* relatórios.
+
+A interface esconder um botão NÃO conta como autorização.
+
+A validação deve existir no backend/banco quando necessário.
+
+---
+
+# 10. TESTE DE SEGURANÇA
+
+Atue também como profissional de segurança de aplicações.
+
+Faça uma análise defensiva e não destrutiva.
+
+Verifique:
+
+* autenticação;
+* autorização;
+* RLS;
+* isolamento multi-tenant;
+* IDOR;
+* acesso horizontal;
+* acesso vertical;
+* exposição de IDs;
+* exposição de informações sensíveis;
+* secrets;
+* chaves;
+* tokens;
+* variáveis de ambiente;
+* logs;
+* mensagens de erro;
+* validação de input;
+* sanitização;
+* XSS;
+* SQL injection;
+* command injection, se aplicável;
+* path traversal, se aplicável;
+* open redirects;
+* CSRF, quando aplicável;
+* CORS;
+* upload de arquivos;
+* enumeração de contas;
+* brute force;
+* rate limiting;
+* abuso de endpoints;
+* manipulação de parâmetros;
+* privilege escalation;
+* mass assignment;
+* dados sensíveis em localStorage;
+* informações pessoais armazenadas sem necessidade;
+* dados sensíveis acessíveis a perfis inadequados.
+
+Não execute ações destrutivas.
+
+Não faça exploração que possa comprometer dados reais.
+
+Priorize inspeção, testes seguros e prova lógica do problema.
+
+---
+
+# 11. SEGURANÇA MULTI-TENANT
+
+Este item é crítico.
+
+Verifique se:
+
+* Tenant A nunca acessa dados do Tenant B.
+* Usuário de Tenant A não consegue alterar Tenant B.
+* query string não troca tenant indevidamente;
+* slug não permite acesso indevido;
+* ID manual não permite acesso;
+* APIs validam tenant;
+* RPCs validam tenant;
+* RLS realmente impede vazamento;
+* frontend não mistura estado entre tenants;
+* localStorage não causa carregamento de tenant incorreto.
+
+Teste também cenários de troca rápida entre tenants.
+
+---
+
+# 12. TESTE DE INPUTS E FORMULÁRIOS
+
+Para cada formulário, teste:
+
+* campos vazios;
+* valores mínimos;
+* valores máximos;
+* strings muito longas;
+* caracteres especiais;
+* Unicode;
+* e-mail inválido;
+* telefone inválido;
+* documentos inválidos;
+* datas inválidas;
+* data passada;
+* data futura;
+* números negativos;
+* números extremamente altos;
+* campos obrigatórios;
+* envio repetido;
+* duplo clique;
+* reload durante envio;
+* retorno do backend.
+
+Confirme se front-end e backend usam regras coerentes.
+
+---
+
+# 13. TESTE DE CONCORRÊNCIA E DUPLICIDADE
+
+Quando aplicável, teste logicamente:
+
+* dois usuários executando a mesma ação;
+* dois agendamentos simultâneos;
+* duplo clique;
+* dois requests iguais;
+* duas abas;
+* atualização concorrente;
+* criação duplicada;
+* edição simultânea.
+
+Verifique constraints e proteção server-side.
+
+---
+
+# 14. TESTE DE ERROS E RESILIÊNCIA
+
+Simule ou inspecione comportamento quando:
+
+* banco falha;
+* request falha;
+* endpoint retorna erro;
+* usuário perde conexão;
+* resposta demora;
+* autenticação expira;
+* registro foi removido;
+* tenant foi suspenso;
+* dado relacionado não existe.
+
+Verifique:
+
+* feedback;
+* retry;
+* loading;
+* bloqueio de botão;
+* mensagens compreensíveis;
+* fallback;
+* rollback quando necessário.
+
+Não aceite como tratamento adequado simplesmente:
+
+toast.error(error.message)
+
+se isso expuser erro técnico do banco ou informações internas.
+
+---
+
+# 15. TESTE DE BILLING E PLANOS
+
+Caso existam planos ou cobrança, valide:
+
+* contratação;
+* upgrade;
+* downgrade;
+* trial;
+* vencimento;
+* cancelamento;
+* inadimplência;
+* renovação;
+* ciclo mensal;
+* ciclo anual;
+* limites;
+* bloqueios;
+* invoices;
+* integração com gateway;
+* webhooks;
+* status de assinatura;
+* suspensão;
+* reativação;
+* troca de plano;
+* pró-rata;
+* proteção contra alteração manual.
+
+Determine se o sistema realmente cobra ou apenas simula cobrança.
+
+---
+
+# 16. TESTE DE FUNCIONALIDADES "FAKE"
+
+Procure funcionalidades que aparentam estar prontas, mas que não funcionam realmente.
+
+Exemplos:
+
+* botão que só altera status;
+* relatório com dado fictício;
+* campanha que não envia;
+* cobrança sem gateway;
+* gráfico sem dados reais;
+* notificação sem serviço de envio;
+* contador que nunca é atualizado;
+* configurações que não afetam o comportamento;
+* feature criada no banco mas não conectada.
+
+Classifique explicitamente como:
+
+"IMPLEMENTAÇÃO VISUAL SEM FUNCIONALIDADE REAL"
+
+quando aplicável.
+
+---
+
+# 17. TESTE DE PERFORMANCE BÁSICA
+
+Sem executar carga destrutiva, analise:
+
+* consultas excessivas;
+* N+1 queries;
+* carregamentos repetidos;
+* fetch duplicado;
+* componentes renderizando excessivamente;
+* listas grandes;
+* paginação;
+* filtros;
+* índices;
+* consultas potencialmente caras;
+* carregamento inicial;
+* assets;
+* imagens;
+* dependências pesadas.
+
+Indique gargalos evidentes.
+
+---
+
+# 18. TESTE DE LOGS E OBSERVABILIDADE
+
+Verifique se existem mecanismos adequados para diagnosticar produção:
+
+* logs;
+* erros;
+* eventos importantes;
+* falhas de API;
+* falhas de autenticação;
+* falhas de pagamento;
+* jobs;
+* webhooks.
+
+Informe o que está ausente para operação em produção.
+
+---
+
+# 19. TESTE DE PRIVACIDADE E DADOS
+
+Identifique:
+
+* dados pessoais;
+* dados sensíveis;
+* documentos;
+* telefone;
+* e-mail;
+* data de nascimento;
+* informações financeiras.
+
+Avalie:
+
+* quem acessa;
+* necessidade real;
+* minimização;
+* exposição;
+* retenção;
+* exclusão;
+* exportação;
+* isolamento.
+
+Aponte riscos de LGPD quando existirem.
+
+---
+
+# 20. CHECKLIST PRÉ-PRODUÇÃO
+
+Ao final, responda claramente:
+
+O SISTEMA PODE SER DISPONIBILIZADO EM PRODUÇÃO HOJE?
+
+Classifique:
+
+SIM
+
+SIM, COM RESSALVAS
+
+NÃO
+
+Se NÃO, informe exatamente o que impede.
+
+---
+
+# FORMATO OBRIGATÓRIO DO RELATÓRIO
+
+O relatório deve ser completo, mas simples de entender.
+
+Não produza uma parede de texto.
+
+Organize da seguinte forma:
+
+## 1. RESUMO EXECUTIVO
+
+Explique em linguagem simples:
+
+* estado atual da plataforma;
+* nível geral de maturidade;
+* principais riscos;
+* se pode entrar em produção.
+
+---
+
+## 2. VISÃO COMO CLIENTE
+
+Informe:
+
+O que funciona bem
+
+O que funciona parcialmente
+
+O que está quebrado
+
+O que causa confusão
+
+O que prejudicaria a confiança do cliente
+
+---
+
+## 3. VISÃO TÉCNICA
+
+Informe:
+
+Arquitetura
+
+Frontend
+
+Backend
+
+Banco
+
+Persistência
+
+Rotas
+
+APIs/endpoints
+
+Autenticação
+
+Permissões
+
+Multi-tenant
+
+Billing
+
+Erros
+
+Performance
+
+---
+
+## 4. VISÃO DE SEGURANÇA
+
+Informe:
+
+O que está protegido corretamente
+
+Vulnerabilidades encontradas
+
+Riscos de vazamento
+
+Riscos de privilege escalation
+
+Riscos de exposição de dados
+
+Endpoints sensíveis
+
+Problemas de RLS
+
+Problemas de autenticação/autorização
+
+---
+
+## 5. INVENTÁRIO SIMPLIFICADO DE FUNCIONALIDADES
+
+Crie uma tabela:
+
+FUNCIONALIDADE | STATUS | OBSERVAÇÃO
+
+Use apenas:
+
+✅ FUNCIONA
+
+⚠️ PARCIAL
+
+❌ NÃO FUNCIONA
+
+🚧 INCOMPLETA
+
+💀 NÃO CONECTADA
+
+❓ NÃO FOI POSSÍVEL TESTAR
+
+---
+
+## 6. LISTA DE PROBLEMAS
+
+Para cada problema:
+
+ID
+
+Título
+
+Prioridade
+
+Categoria
+
+Comportamento atual
+
+Comportamento esperado
+
+Evidência
+
+Causa provável
+
+Impacto
+
+Correção recomendada
+
+Arquivos/componentes relacionados
+
+Classifique a prioridade como:
+
+P0 — BLOQUEADOR DE PRODUÇÃO
+
+P1 — CRÍTICO
+
+P2 — ALTO
+
+P3 — MÉDIO
+
+P4 — BAIXO
+
+---
+
+## 7. BLOQUEADORES DE PRODUÇÃO
+
+Liste apenas os problemas que impedem disponibilizar o produto para clientes reais.
+
+Para cada um, explique o motivo em linguagem simples.
+
+---
+
+## 8. O QUE ESTÁ FALTANDO
+
+Informe explicitamente funcionalidades, infraestrutura ou controles que ainda não existem, mas são necessários para disponibilização segura.
+
+Separe entre:
+
+OBRIGATÓRIO ANTES DO LANÇAMENTO
+
+IMPORTANTE LOGO APÓS O LANÇAMENTO
+
+MELHORIA FUTURA
+
+Não invente novas funcionalidades comerciais apenas porque seriam interessantes.
+
+Considere somente necessidades técnicas, operacionais, de segurança, integridade ou funcionalidades que o próprio sistema já promete entregar.
+
+---
+
+## 9. ORDEM RECOMENDADA DE CORREÇÃO
+
+Monte uma sequência baseada em dependências.
+
+Não ordene apenas pela quantidade de erros.
+
+Priorize:
+
+1. segurança e vazamento de dados;
+2. integridade de dados;
+3. autenticação e autorização;
+4. isolamento multi-tenant;
+5. funcionalidades centrais;
+6. regras de negócio;
+7. billing;
+8. persistência;
+9. experiência do usuário;
+10. otimizações.
+
+Agrupe problemas que tenham a mesma causa raiz quando fizer sentido.
+
+---
+
+## 10. MATRIZ FINAL DE PRONTIDÃO
+
+Atribua uma nota de 0 a 10 para:
+
+Segurança
+
+Autenticação
+
+Autorização
+
+Multi-tenant
+
+Integridade dos dados
+
+Regras de negócio
+
+Persistência
+
+Funcionalidades principais
+
+Billing
+
+Experiência do usuário
+
+Tratamento de erros
+
+Performance
+
+Observabilidade
+
+Privacidade/LGPD
+
+Qualidade geral para produção
+
+Para cada nota, escreva uma justificativa curta.
+
+---
+
+## 11. VEREDITO FINAL
+
+Responda objetivamente:
+
+PRONTO PARA PRODUÇÃO: SIM / NÃO
+
+NÍVEL DE RISCO: BAIXO / MÉDIO / ALTO / CRÍTICO
+
+PRINCIPAL MOTIVO:
+
+PRINCIPAIS 5 BLOQUEADORES:
+
+O QUE PRECISA SER FEITO PARA LIBERAÇÃO:
+
+---
+
+# REGRAS DE CONFIABILIDADE DO RELATÓRIO
+
+Marque cada constatação como:
+
+[FATO] — confirmado diretamente em código, banco, configuração ou teste.
+
+[HIPÓTESE] — forte indício, mas exige confirmação em runtime.
+
+[NÃO TESTADO] — não houve acesso ou condição suficiente para confirmar.
+
+Não transforme hipótese em fato.
+
+Não declare que algo funciona apenas porque o código aparenta estar correto.
+
+Sempre que possível, valide de ponta a ponta.
+
+---
+
+# IMPORTANTE
+
+Durante toda esta auditoria:
+
+NÃO CORRIJA NADA.
+
+NÃO ALTERE CÓDIGO.
+
+NÃO EXECUTE MIGRATIONS.
+
+NÃO MODIFIQUE BANCO.
+
+NÃO MUDE CONFIGURAÇÕES.
+
+NÃO TENTE "MELHORAR" O PRODUTO.
+
+Primeiro precisamos conhecer exatamente o estado real do sistema.
+
+Ao terminar o relatório, PARE.
+
+Não inicie nenhuma implementação.
+
+Aguarde minha autorização para qualquer correção.
